@@ -1,0 +1,58 @@
+diff --git a/src/Kbuild b/src/Kbuild
+index 95501a7..fe4f519 100644
+--- a/src/Kbuild
++++ b/src/Kbuild
+@@ -1,3 +1,5 @@
++ccflags-y := -I/usr/local/etherlab/include
++
+ obj-m += lcec.o
+ lcec-objs := \
+     lcec_main.o \
+diff --git a/src/realtime.mk b/src/realtime.mk
+index c9f7628..56c2778 100644
+--- a/src/realtime.mk
++++ b/src/realtime.mk
+@@ -3,6 +3,8 @@ include Kbuild
+ 
+ include $(MODINC)
+ 
++EXTRA_CFLAGS += -I/usr/local/etherlab/include
++
+ ifeq ($(BUILDSYS),kbuild)
+ 
+ # dirty workaround to get the RTAI directory
+@@ -17,10 +19,10 @@ all:
+ else
+ 
+ ifeq ($(MODINC_HAS_EXTRA_LDFLAGS),y)
+-  LDFLAGS += -Wl,-rpath,$(LIBDIR)
+-  EXTRA_LDFLAGS += -L$(LIBDIR) -llinuxcnchal -lethercat -lrt
++  LDFLAGS += -Wl,-rpath,$(LIBDIR) -Wl,-rpath,/usr/local/etherlab/lib
++  EXTRA_LDFLAGS += -L$(LIBDIR) -L/usr/local/etherlab/lib -llinuxcnchal -lethercat -lrt
+ else
+-  LDFLAGS += -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lethercat
++  LDFLAGS += -Wl,-rpath,$(LIBDIR) -Wl,-rpath,/usr/local/etherlab/lib -L$(LIBDIR) -L/usr/local/etherlab/lib -llinuxcnchal -lethercat
+ endif
+ 
+ all: modules
+diff --git a/src/user.mk b/src/user.mk
+index 6b7b780..9686bb8 100644
+--- a/src/user.mk
++++ b/src/user.mk
+@@ -1,6 +1,7 @@
+ include ../config.mk
+ 
+ EXTRA_CFLAGS := $(filter-out -Wframe-larger-than=%,$(EXTRA_CFLAGS))
++EXTRA_CFLAGS += -I/usr/local/etherlab/include
+ 
+ LCEC_CONF_OBJS = \
+ 	lcec_conf.o \
+@@ -16,7 +17,7 @@ install: lcec_conf
+ 	cp lcec_conf $(DESTDIR)$(EMC2_HOME)/bin/
+ 
+ lcec_conf: $(LCEC_CONF_OBJS)
+-	$(CC) -o $@ $(LCEC_CONF_OBJS) -Wl,-rpath,$(LIBDIR) -L$(LIBDIR) -llinuxcnchal -lexpat
++	$(CC) -o $@ $(LCEC_CONF_OBJS) -Wl,-rpath,$(LIBDIR) -Wl,-rpath,/usr/local/etherlab/lib -L$(LIBDIR) -L/usr/local/etherlab/lib -llinuxcnchal -lexpat
+ 
+ %.o: %.c
+ 	$(CC) -o $@ $(EXTRA_CFLAGS) -URTAPI -U__MODULE__ -DULAPI -Os -c $<
