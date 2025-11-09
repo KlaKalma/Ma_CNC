@@ -27,28 +27,80 @@
 		</button>
     </labelframe>
     
-    <labelframe text="Servos">
-		<label>
-            <text>"X Axis Load:"</text>
-        </label>
+    <labelframe text="Servo LC10E - Axe X">
+        <!-- Position -->
+        <hbox>
+            <label><text>"Position Cmd:"</text></label>
+            <number><halpin>"x-pos-cmd"</halpin><font>("Helvetica",12)</font><width>10</width><format>"+4.3f"</format></number>
+            <label><text>" mm"</text></label>
+        </hbox>
+        <hbox>
+            <label><text>"Position FB: "</text></label>
+            <number><halpin>"x-pos-fb"</halpin><font>("Helvetica",12)</font><width>10</width><format>"+4.3f"</format></number>
+            <label><text>" mm"</text></label>
+        </hbox>
+        
+        <!-- Erreur position -->
+        <hbox>
+            <label><text>"Erreur:      "</text></label>
+            <number><halpin>"x-pos-error"</halpin><font>("Helvetica",12,"bold")</font><width>10</width><format>"+4.3f"</format></number>
+            <label><text>" mm"</text></label>
+        </hbox>
+        
+        <!-- Vitesse -->
+        <hbox>
+            <label><text>"Vitesse:     "</text></label>
+            <number><halpin>"x-velocity"</halpin><font>("Helvetica",12)</font><width>10</width><format>"+4.1f"</format></number>
+            <label><text>" mm/s"</text></label>
+        </hbox>
         <bar>
-            <halpin>"x-load"</halpin>
-            <max_>1000</max_>
+            <halpin>"x-velocity-bar"</halpin>
+            <min_>-500</min_>
+            <max_>500</max_>
+            <bgcolor>"grey"</bgcolor>
+            <fillcolor>"green"</fillcolor>
         </bar>
-        <label>
-            <text>"Y Axis Load:"</text>
-        </label>
-        <bar>
-            <halpin>"y-load"</halpin>
-            <max_>1000</max_>
-        </bar>
-        <label>
-            <text>"Z Axis Load:"</text>
-        </label>
-        <bar>
-            <halpin>"z-load"</halpin>
-            <max_>1000</max_>
-        </bar>
+        
+        <!-- Limit Switches et Home -->
+        <relief>RIDGE</relief>
+        <bd>2</bd>
+        <label><text>"Limit Switches:"</text></label>
+        <hbox>
+            <label><text>"Min:"</text></label>
+            <led><halpin>"x-limit-min"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>20</size></led>
+            <label><text>" Home:"</text></label>
+            <led><halpin>"x-home-sw"</halpin><on_color>"blue"</on_color><off_color>"grey"</off_color><size>20</size></led>
+            <label><text>" Max:"</text></label>
+            <led><halpin>"x-limit-max"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>20</size></led>
+        </hbox>
+        <hbox>
+            <label><text>"Soft Min:"</text></label>
+            <led><halpin>"x-soft-min"</halpin><on_color>"orange"</on_color><off_color>"grey"</off_color><size>20</size></led>
+            <label><text>" Homed:"</text></label>
+            <led><halpin>"x-homed"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>20</size></led>
+            <label><text>" Soft Max:"</text></label>
+            <led><halpin>"x-soft-max"</halpin><on_color>"orange"</on_color><off_color>"grey"</off_color><size>20</size></led>
+        </hbox>
+        
+        <!-- États servo -->
+        <relief>RIDGE</relief>
+        <bd>2</bd>
+        <label><text>"État Servo:"</text></label>
+        <hbox>
+            <label><text>"Enabled:"</text></label>
+            <led><halpin>"x-enabled"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>25</size></led>
+            <label><text>" Fault:"</text></label>
+            <led><halpin>"x-fault"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>25</size></led>
+            <label><text>" Warn:"</text></label>
+            <led><halpin>"x-warning"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>25</size></led>
+        </hbox>
+        
+        <!-- Bouton reset -->
+        <button>
+            <halpin>"x-fault-reset"</halpin>
+            <text>"RESET FAULT X"</text>
+            <font>("Helvetica",10,"bold")</font>
+        </button>
     </labelframe>
     
     <labelframe text="Spindle">
