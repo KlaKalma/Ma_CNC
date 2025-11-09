@@ -1,9 +1,10 @@
 diff --git a/src/Kbuild b/src/Kbuild
-index 95501a7..fe4f519 100644
+index 95501a7..d99d25a 100644
 --- a/src/Kbuild
 +++ b/src/Kbuild
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,6 @@
 +ccflags-y := -I/usr/local/etherlab/include
++ldflags-y := -L/usr/local/etherlab/lib -lethercat
 +
  obj-m += lcec.o
  lcec-objs := \

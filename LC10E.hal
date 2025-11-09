@@ -1,28 +1,131 @@
-# --- Load Kinematics ---
-loadrt [KINS]KINEMATICS
-loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=1
+########################################################################
+# HAL Configuration for LinuxCNC with EtherCAT LC10E Servo Drive
+# 
+# Hardware:
+#   - 1x LC10E Servo Drive (CIA402) on EtherCAT
+#   - Configured for single axis (X) test
+#
+# Author: Configuration based on Marco Reps best practices
+# Date: 2025-11-09
+########################################################################
 
-# --- Load EtherCAT ---
-loadusr -W lcec_conf LC10E_vendeur.xml
+########################################################################
+# SECTION 1: Load Real-time Components
+########################################################################
+
+# Load kinematics (trivial for simple cartesian machine)
+loadrt [KINS]KINEMATICS
+
+# Load motion controller
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[KINS]JOINTS
+
+# Load EtherCAT master and configure with XML file
+loadusr -W lcec_conf ethercat-conf.xml
 loadrt lcec
 
-# --- Load CIA402 driver for 1 axis ---
+# Load CIA402 driver for servo control (1 axis)
 loadrt cia402 count=1
 
-# --- Utilities ---
-loadrt mult2 count=1
-loadrt near
-loadrt dbounce
+########################################################################
+# SECTION 2: Add Functions to Servo Thread
+########################################################################
+# Order is CRITICAL: read hardware → process → write hardware
 
-# --- Servo thread ---
-addf mult2.0         servo-thread
-addf dbounce.0       servo-thread
-addf lcec.read-all   servo-thread
+# Read EtherCAT PDOs from hardware
+addf lcec.read-all servo-thread
+
+# Process CIA402 state machine and feedback
 addf cia402.0.read-all servo-thread
-addf motion-command-handler servo-thread
-addf motion-controller      servo-thread
-addf cia402.0.write-all    servo-thread
-addf lcec.write-all         servo-thread
 
-# --- Enable EMC ---
+# Motion control planning
+addf motion-command-handler servo-thread
+addf motion-controller servo-thread
+
+# Prepare CIA402 commands
+addf cia402.0.write-all servo-thread
+
+# Write EtherCAT PDOs to hardware
+addf lcec.write-all servo-thread
+
+########################################################################
+# SECTION 3: EtherCAT to CIA402 Connections
+########################################################################
+
+# === Control Word (Master -> Slave) ===
+net x-controlword cia402.0.controlword => lcec.0.0.controlword
+
+# === Status Word (Slave -> Master) ===
+net x-statusword lcec.0.0.statusword => cia402.0.statusword
+
+# === Position Control ===
+net x-pos-cmd cia402.0.drv-target-position => lcec.0.0.target-position
+net x-pos-fb lcec.0.0.actual-position => cia402.0.drv-actual-position
+
+# === Velocity Feedback ===
+net x-vel-fb lcec.0.0.actual-velocity => cia402.0.drv-actual-velocity
+
+# === Operation Mode ===
+net x-opmode cia402.0.opmode => lcec.0.0.opmode
+net x-opmode-display lcec.0.0.opmode-display => cia402.0.opmode-display
+
+########################################################################
+# SECTION 4: CIA402 to Motion Control Connections
+########################################################################
+
+# === Enable Chain ===
+net x-enable joint.0.amp-enable-out => cia402.0.enable
+
+# === Position Command (Motion -> CIA402) ===
+net x-pos-cmd-motion joint.0.motor-pos-cmd => cia402.0.pos-cmd
+
+# === Position Feedback (CIA402 -> Motion) ===
+net x-pos-fb-motion cia402.0.pos-fb => joint.0.motor-pos-fb
+
+# === Fault Handling ===
+net x-fault cia402.0.drv-fault => joint.0.amp-fault-in
+
+# === Homing ===
+net x-home joint.0.home-sw-in <= cia402.0.stat-homed
+net x-home-index joint.0.index-enable <=> cia402.0.home
+
+########################################################################
+# SECTION 5: CIA402 Parameters
+########################################################################
+
+# Scale: encoder counts per machine unit (adjust for your setup)
+# Example: 10000 counts/mm for a typical servo with 1mm/rev ballscrew
+setp cia402.0.pos-scale 10000.0
+
+# Velocity scale: counts per machine unit per revolution  
+setp cia402.0.velo-scale 10000.0
+
+# Enable Cyclic Synchronous Position mode (CIA402 mode 8)
+setp cia402.0.csp-mode 1
+
+# Auto fault reset on enable
+setp cia402.0.auto-fault-reset 1
+
+########################################################################
+# SECTION 6: System Configuration
+########################################################################
+
+# Enable the I/O controller (required for LinuxCNC to run)
 setp iocontrol.0.emc-enable-in 1
+
+# Set default joint limits if not in INI (safety)
+# These should match your INI file values
+# setp joint.0.ferror 10.0
+# setp joint.0.min-ferror 1.0
+
+########################################################################
+# SECTION 7: Debug Pins (optional - comment out in production)
+########################################################################
+
+# Uncomment to monitor key signals in HAL meter:
+# loadusr halmeter sig x-statusword
+# loadusr halmeter sig x-pos-fb
+# loadusr halmeter pin cia402.0.stat-op-enabled
+
+########################################################################
+# End of HAL configuration
+########################################################################

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<masters>
+  <master idx="0" appTimePeriod="1000000" refClockSyncCycles="1">
+    <!-- LC10E Servo Drive - Position 0 -->
+    <slave idx="0" type="generic" vid="00000766" pid="00000402" configPdos="true">
+      <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
+      
+      <!-- RxPDO: Master -> Slave (Commands to drive) -->
+      <syncManager idx="2" dir="out">
+        <pdo idx="1600">
+          <!-- CIA402 Controlword -->
+          <pdoEntry idx="6040" subIdx="00" bitLen="16" halPin="controlword" halType="u32"/>
+          <!-- Target Position -->
+          <pdoEntry idx="607a" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <!-- Touch probe function -->
+          <pdoEntry idx="60b8" subIdx="00" bitLen="16" halPin="touch-probe-function" halType="u32"/>
+          <!-- Modes of operation -->
+          <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="opmode" halType="s32"/>
+          <!-- Target velocity -->
+          <pdoEntry idx="60ff" subIdx="00" bitLen="32" halPin="target-velocity" halType="s32"/>
+        </pdo>
+      </syncManager>
+      
+      <!-- TxPDO: Slave -> Master (Feedback from drive) -->
+      <syncManager idx="3" dir="in">
+        <pdo idx="1a00">
+          <!-- Error code -->
+          <pdoEntry idx="603f" subIdx="00" bitLen="16" halPin="error-code" halType="u32"/>
+          <!-- CIA402 Statusword -->
+          <pdoEntry idx="6041" subIdx="00" bitLen="16" halPin="statusword" halType="u32"/>
+          <!-- Position actual value -->
+          <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="actual-position" halType="s32"/>
+          <!-- Velocity actual value -->
+          <pdoEntry idx="606c" subIdx="00" bitLen="32" halPin="actual-velocity" halType="s32"/>
+          <!-- Touch probe status -->
+          <pdoEntry idx="60b9" subIdx="00" bitLen="16" halPin="touch-probe-status" halType="u32"/>
+          <!-- Touch probe pos1 value -->
+          <pdoEntry idx="60ba" subIdx="00" bitLen="32" halPin="touch-probe-pos1" halType="s32"/>
+          <!-- Digital inputs -->
+          <pdoEntry idx="60fd" subIdx="00" bitLen="32" halPin="digital-inputs" halType="u32"/>
+          <!-- Modes of operation display -->
+          <pdoEntry idx="6061" subIdx="00" bitLen="8" halPin="opmode-display" halType="s32"/>
+        </pdo>
+      </syncManager>
+    </slave>
+  </master>
+</masters>
