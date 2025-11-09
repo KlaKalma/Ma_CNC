@@ -17,9 +17,9 @@
 		</Groups>
 		<Devices>
 			<Device Physics="YY">
-				<Type ProductCode="#x00000204" RevisionNo="#x00000402">LC10E V1.11</Type>
-				<Name LcId="1033">LC10E V1.11</Name>
-				<Comment LcId="1031">LC10E V1.11</Comment>
+				<Type ProductCode="#x00000402" RevisionNo="#x00000204">LC10E V1.04</Type>
+				<Name LcId="1033">LC10E V1.04</Name>
+				<Comment LcId="1031">LC10E V1.04</Comment>
 				<Info>
 					<StateMachine>
 						<Timeout>
