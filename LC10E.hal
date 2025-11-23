@@ -159,8 +159,8 @@ net y-home joint.1.home-sw-in <= cia402.1.stat-homed
 net y-home-index joint.1.index-enable <=> cia402.1.home
 
 # === CIA402 Parameters for Y ===
-setp cia402.1.pos-scale 26214.4
-setp cia402.1.velo-scale 26214.4
+setp cia402.1.pos-scale -26214.4
+setp cia402.1.velo-scale -26214.4
 setp cia402.1.csp-mode 1
 setp cia402.1.auto-fault-reset 1
 
