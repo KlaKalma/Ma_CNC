@@ -363,12 +363,89 @@ sudo /usr/local/etherlab/bin/ethercat slaves
 
 ---
 
-## 10. Notes de version
+## 10. Ajout d'un nouveau drive EtherCAT
+
+Lorsque vous ajoutez un nouveau servo/drive à votre chaîne EtherCAT, il peut avoir une **configuration PDO persistante** incompatible qui empêche LinuxCNC de le configurer correctement.
+
+### 10.1 Symptômes
+
+- Le nouveau drive reste en **PREOP** avec erreur (flag E)
+- Logs EtherCAT montrent :
+  ```
+  EtherCAT WARNING 0-X: Failed to configure mapping of PDO 0x1600
+  EtherCAT ERROR 0-X: AL status message 0x001E: "Invalid input configuration"
+  ```
+- Le drive refuse la configuration même si elle est identique à celle déjà mappée
+
+### 10.2 Solution : Réinitialiser les PDO assignments
+
+**Important** : Arrêter LinuxCNC avant d'exécuter ces commandes !
+
+#### Étape 1 : Identifier la position du nouveau drive
+
+```bash
+sudo /usr/local/etherlab/bin/ethercat slaves
+# Exemple de sortie :
+# 0  0:0  OP     +  LC10E_V1.04  (ancien drive qui fonctionne)
+# 1  0:1  PREOP  E  LC10E_V1.04  (nouveau drive avec erreur)
+```
+
+#### Étape 2 : Réinitialiser les PDOs du nouveau drive UNIQUEMENT
+
+Remplacez `-p1` par la position de votre nouveau drive (0, 1, 2, etc.) :
+
+```bash
+# Désactiver RxPDO assignment (Master → Slave)
+sudo /usr/local/etherlab/bin/ethercat download -p1 -t uint8 0x1c12 0 0
+
+# Désactiver TxPDO assignment (Slave → Master)
+sudo /usr/local/etherlab/bin/ethercat download -p1 -t uint8 0x1c13 0 0
+```
+
+**Explication** :
+- `0x1c12` = RxPDO Assignment (commandes vers le drive)
+- `0x1c13` = TxPDO Assignment (feedback du drive)
+- Subindex `0` mis à `0` = désactive tous les PDOs assignés
+
+#### Étape 3 : Vérifier l'état
+
+```bash
+sudo /usr/local/etherlab/bin/ethercat slaves
+# Le nouveau drive devrait être en PREOP sans erreur (pas de flag E)
+```
+
+#### Étape 4 : Relancer LinuxCNC
+
+Le nouveau drive devrait maintenant accepter la configuration PDO définie dans votre `ethercat-conf.xml`.
+
+### 10.3 ⚠️ Attention
+
+**NE PAS** réinitialiser les PDOs d'un drive qui fonctionne déjà ! Cela le casserait et vous devriez le reconfigurer aussi.
+
+Si vous réinitialisez accidentellement tous les drives :
+1. Répétez les commandes de l'Étape 2 pour **chaque drive**
+2. Relancez LinuxCNC - tous les drives seront reconfigurés
+
+### 10.4 Alternative : Reset complet
+
+Si les commandes SDO échouent, vous pouvez aussi :
+
+1. **Éteindre physiquement le nouveau drive** (couper l'alimentation)
+2. Attendre 5-10 secondes
+3. **Rallumer le drive**
+4. Relancer LinuxCNC
+
+Cette méthode efface la mémoire volatile du drive, incluant les PDO assignments.
+
+---
+
+## 11. Notes de version
 
 | Date | Action | Notes |
 |------|--------|-------|
 | 2025-11-09 | Installation initiale | EtherCAT Master + LCEC + CIA402 sur Raspberry Pi |
 | 2025-11-09 | Création du patch | Chemins EtherLab pour compilation LCEC |
+| 2025-11-24 | Ajout section nouveau drive | Procédure pour réinitialiser PDOs d'un nouveau servo |
 
 ---
 
