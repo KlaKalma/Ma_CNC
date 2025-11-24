@@ -1,0 +1,166 @@
+# CSP Control Mode Diagram - Structured Representation
+
+system_name: "CSP Control Mode"
+
+## Input Signals
+inputs:
+  - servo_on: "System activation signal"
+  - position_offset_60B0h: "Position offset parameter"
+  - target_position_607Ah: "Target position setpoint"
+  - speed_offset_60B1h: "Speed offset parameter"
+
+## Main Control Blocks
+
+blocks:
+  
+  gear_ratio:
+    id: "6091_01h_6091_02h"
+    inputs: ["position_offset_60B0h", "target_position_607Ah"]
+    output: "scaled_position"
+    description: "Applies gear ratio transformation to position values"
+  
+  speed_feedforward:
+    id: "2008_14h"
+    inputs: ["speed_offset_60B1h"]
+    filters: ["2008_13h"]
+    output: "feedforward_speed"
+    description: "Speed feedforward with filtering"
+  
+  position_gain:
+    id: "2008_03h"
+    inputs: ["scaled_position"]
+    output: "position_control_signal"
+    description: "Position loop gain controller"
+  
+  speed_calculate:
+    inputs: ["position_control_signal", "feedforward_speed"]
+    output: "speed_command"
+    description: "Combines position control and speed feedforward"
+  
+  maximum_speed_limit:
+    id: "607Fh"
+    inputs: ["speed_command"]
+    output: "limited_speed"
+    description: "Applies maximum speed limitation"
+  
+  speed_regulator:
+    id: "2008_01h_2008_02h"
+    inputs: ["limited_speed", "torque_feedback"]
+    output: "torque_command"
+    description: "Speed control loop regulator"
+  
+  torque_feedforward:
+    id: "2008_16h"
+    filters: ["2008_15h"]
+    inputs: ["speed_offset_60B1h"]
+    output: "feedforward_torque"
+    description: "Torque feedforward with gain and filtering"
+  
+  torque_filtering:
+    id: "2007_06h"
+    limits: "Torque limitation"
+    inputs: ["torque_command", "feedforward_torque"]
+    output: "filtered_torque"
+    description: "Torque filtering and limitation stage"
+  
+  motor:
+    inputs: ["filtered_torque"]
+    output: ["motion", "torque_feedback_607h"]
+    description: "Motor actuator"
+  
+  encoder:
+    inputs: ["motion"]
+    output: "position_feedback_6063h"
+    description: "Position encoder sensor"
+
+## Feedback Loops
+
+feedback_loops:
+  - name: "Position Feedback"
+    source: "encoder"
+    destination: "gear_ratio"
+    signal: "6063h"
+    
+  - name: "Torque Feedback"
+    source: "motor"
+    destination: "speed_regulator"
+    signal: "6077h"
+
+## Signal Flow
+
+signal_flow:
+  1:
+    from: "servo_on"
+    to: "gear_ratio"
+    
+  2:
+    from: "gear_ratio"
+    to: "position_gain"
+    
+  3:
+    from: "position_gain"
+    to: "speed_calculate"
+    operation: "sum"
+    
+  4:
+    from: "speed_feedforward"
+    to: "speed_calculate"
+    operation: "sum"
+    
+  5:
+    from: "speed_calculate"
+    to: "maximum_speed_limit"
+    
+  6:
+    from: "maximum_speed_limit"
+    to: "speed_regulator"
+    operation: "sum"
+    
+  7:
+    from: "speed_regulator"
+    to: "torque_filtering"
+    operation: "sum"
+    
+  8:
+    from: "torque_feedforward"
+    to: "torque_filtering"
+    operation: "sum"
+    
+  9:
+    from: "torque_filtering"
+    to: "motor"
+    
+  10:
+    from: "motor"
+    to: "encoder"
+    
+  11:
+    from: "encoder"
+    to: "gear_ratio"
+    type: "feedback"
+
+## Parameter References
+
+parameters:
+  - "6091_01h, 6091_02h: Gear ratio"
+  - "2008_14h: Speed feedforward"
+  - "2008_13h: Speed filtering"
+  - "2008_03h: Position gain"
+  - "607Fh: Maximum speed limit"
+  - "2008_01h, 2008_02h: Speed regulator"
+  - "2008_16h: Torque feedforward gain"
+  - "2008_15h: Torque feedforward filtering"
+  - "2007_06h: Torque filtering and limitation"
+  - "60B0h: Position offset"
+  - "607Ah: Target position"
+  - "60B1h: Speed offset"
+  - "6063h: Position feedback"
+  - "6077h: Torque feedback"
+
+## Control Architecture
+
+architecture: "Cascaded control loops"
+loops:
+  outer_loop: "Position control"
+  middle_loop: "Speed control"
+  inner_loop: "Torque control"
