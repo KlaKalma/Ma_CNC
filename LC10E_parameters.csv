@@ -1,289 +1,494 @@
-Group,Parameter,Code,SDO_Index,Name,Unit,Range,Default,Description
-P0,P0-00,0x2000:00,Number of parameters,-,-,15,P0 group parameter count
-P0,P0-01,0x2000:01,Control Mode,-,0-2,0,"0=Position, 1=Velocity, 2=Torque"
-P0,P0-02,0x2000:02,Motor Type,-,0-3,0,"0=400W, 1=750W, 2=1500W, 3=Custom"
-P0,P0-03,0x2000:03,Encoder Type,-,0-2,0,"0=Incremental, 1=Absolute single-turn, 2=Absolute multi-turn"
-P0,P0-04,0x2000:04,Encoder Resolution,pulse/rev,1-262144,131072,Encoder pulses per revolution (default 17-bit)
-P0,P0-05,0x2000:05,Rated Current,A,0.1-50.0,Model dependent,Motor rated current
-P0,P0-06,0x2000:06,Peak Current,A,0.1-100.0,Model dependent,Motor peak current (usually 2-3x rated)
-P0,P0-07,0x2000:07,Rated Speed,RPM,1-10000,Model dependent,Motor rated speed
-P0,P0-08,0x2000:08,Max Speed,RPM,1-10000,Model dependent,Motor maximum speed
-P0,P0-09,0x2000:09,Motor Poles,-,2-20,Model dependent,Number of motor pole pairs
-P0,P0-10,0x2000:0A,Torque Constant,Nm/A,0.01-10.0,Model dependent,Motor torque constant Kt
-P0,P0-11,0x2000:0B,Rated Voltage,V,24-380,Model dependent,Motor rated voltage
-P0,P0-12,0x2000:0C,Phase Resistance,Ohm,0.01-100.0,Model dependent,Motor phase-to-phase resistance
-P0,P0-13,0x2000:0D,Phase Inductance,mH,0.01-100.0,Model dependent,Motor phase-to-phase inductance
-P0,P0-14,0x2000:0E,Rotor Inertia,kg.cm²,0.01-1000.0,Model dependent,Motor rotor moment of inertia
-P0,P0-15,0x2000:0F,Back EMF Constant,V/kRPM,0.1-500.0,Model dependent,Motor back-EMF constant Ke
-P1,P1-00,0x2100:00,Number of parameters,-,-,20,P1 group parameter count
-P1,P1-01,0x2100:01,Position Command Source,-,0-2,0,"0=EtherCAT, 1=Pulse input, 2=Internal generator"
-P1,P1-02,0x2100:02,Pulse Input Mode,-,0-3,0,"0=CW/CCW, 1=Pulse+Direction, 2=A/B quadrature, 3=Up/Down"
-P1,P1-03,0x2100:03,Electronic Gear Ratio Numerator,-,1-1000000,1,Command multiplier numerator (Cmul/Cdiv)
-P1,P1-04,0x2100:04,Electronic Gear Ratio Denominator,-,1-1000000,1,Command multiplier denominator
-P1,P1-05,0x2100:05,Position Feedforward Gain,%,0-100,0,Position feedforward compensation (reduces lag)
-P1,P1-06,0x2100:06,Position Arrival Range,pulse,0-100000,100,In-position window tolerance
-P1,P1-07,0x2100:07,Position Overflow Range,pulse,0-2147483647,2147483647,Position counter overflow limit
-P1,P1-08,0x2100:08,Command Smoothing Filter,-,0-5,0,"0=None, 1-5=Filter level (increases lag)"
-P1,P1-09,0x2100:09,Position Command Filter Time,ms,0-100,0,First-order command filter time constant
-P1,P1-10,0x2100:0A,Velocity Feedforward Gain,%,0-200,0,Velocity feedforward (improves tracking)
-P1,P1-11,0x2100:0B,Acceleration Feedforward,%,0-200,0,Acceleration feedforward (reduces lag)
-P1,P1-12,0x2100:0C,Torque Feedforward,%,0-200,0,Torque feedforward compensation
-P1,P1-13,0x2100:0D,Position Deadband,pulse,0-10000,0,Position error ignored below this value
-P1,P1-14,0x2100:0E,Zero Position Offset,pulse,-2147483648-2147483647,0,Encoder zero position adjustment
-P1,P1-15,0x2100:0F,Position Polarity,-,0-1,0,"0=Normal, 1=Reverse position direction"
-P1,P1-16,0x2100:10,Software Limit Enable,-,0-3,0,"0=Disable, 1=Pos only, 2=Neg only, 3=Both"
-P1,P1-17,0x2100:11,Positive Software Limit,pulse,-2147483648-2147483647,2147483647,Maximum positive position limit
-P1,P1-18,0x2100:12,Negative Software Limit,pulse,-2147483648-2147483647,-2147483648,Maximum negative position limit
-P1,P1-19,0x2100:13,Software Limit Action,-,0-2,0,"0=Quick stop, 1=Slow stop, 2=Emergency stop"
-P1,P1-20,0x2100:14,Position Wraparound Enable,-,0-1,0,"0=Disable, 1=Enable modulo position"
-P2,P2-00,0x2001:00,Number of parameters,-,-,25,P2 group parameter count
-P2,P2-01,0x2001:01,Position Loop Kp,1/s,1-2000,100,Position loop proportional gain
-P2,P2-02,0x2002:01,Position Loop Ki,1/s²,0-10000,0,Position loop integral gain
-P2,P2-03,0x2003:01,Position Loop Kd,ms,0-100,0,Position loop derivative gain (time constant)
-P2,P2-04,0x2004:01,Speed Loop Kp,Hz,1-2000,100,Speed loop proportional gain
-P2,P2-05,0x2005:01,Speed Loop Ki,Hz,1-10000,500,Speed loop integral gain
-P2,P2-06,0x2006:01,Speed Loop Cutoff Frequency,Hz,50-5000,1000,Speed loop low-pass filter cutoff
-P2,P2-07,0x2007:01,Torque Filter Time Constant,ms,0.0-10.0,0.5,Torque command first-order filter
-P2,P2-08,0x2008:01,Notch Filter 1 Frequency,Hz,0-2000,0,"Notch filter 1 center frequency (0=disabled)"
-P2,P2-09,0x2009:01,Notch Filter 1 Width,Hz,0-500,50,Notch filter 1 bandwidth
-P2,P2-10,0x200A:01,Notch Filter 1 Depth,%,0-100,50,Notch filter 1 attenuation depth
-P2,P2-11,0x200B:01,Notch Filter 2 Frequency,Hz,0-2000,0,"Notch filter 2 center frequency (0=disabled)"
-P2,P2-12,0x200C:01,Notch Filter 2 Width,Hz,0-500,50,Notch filter 2 bandwidth
-P2,P2-13,0x200D:01,Notch Filter 2 Depth,%,0-100,50,Notch filter 2 attenuation depth
-P2,P2-14,0x200E:01,Position Loop Auto-Tuning Level,-,0-3,0,"0=Manual, 1=Low, 2=Medium, 3=High response"
-P2,P2-15,0x200F:01,Speed Loop Auto-Tuning Level,-,0-3,0,"0=Manual, 1=Low, 2=Medium, 3=High response"
-P2,P2-16,0x2010:01,Inertia Ratio,-,1-10000,100,Load-to-motor inertia ratio (%)
-P2,P2-17,0x2011:01,Adaptive Filter Enable,-,0-1,0,"0=Disabled, 1=Enabled (auto notch)"
-P2,P2-18,0x2012:01,Vibration Suppression Mode,-,0-3,0,"0=Off, 1=Mode1, 2=Mode2, 3=Auto"
-P2,P2-19,0x2013:01,Position Integral Limit,pulse,0-1000000,10000,Position loop integral saturation limit
-P2,P2-20,0x2014:01,Speed Integral Limit,RPM,0-10000,1000,Speed loop integral saturation limit
-P2,P2-21,0x2015:01,Torque Limit in Position Mode,%,0-300,300,Max torque when in position control
-P2,P2-22,0x2016:01,Current Loop Kp,-,1-32767,Auto,Current loop proportional gain (advanced)
-P2,P2-23,0x2017:01,Current Loop Ki,-,1-32767,Auto,Current loop integral gain (advanced)
-P2,P2-24,0x2018:01,Observer Gain,-,0-100,0,State observer gain for disturbance rejection
-P2,P2-25,0x2019:01,Damping Coefficient,-,0-200,100,System damping adjustment (%)
-P3,P3-00,0x2200:00,Number of parameters,-,-,15,P3 group parameter count
-P3,P3-01,0x2200:01,Speed Command Source,-,0-2,0,"0=EtherCAT, 1=Analog input, 2=Internal reference"
-P3,P3-02,0x2200:02,Internal Speed Reference,RPM,0-10000,3000,Speed setpoint for internal mode
-P3,P3-03,0x2200:03,Acceleration Time,ms,0-10000,100,Linear ramp-up time 0→rated speed
-P3,P3-04,0x2200:04,Deceleration Time,ms,0-10000,100,Linear ramp-down time rated→0 speed
-P3,P3-05,0x2200:05,S-Curve Time,%,0-100,0,S-curve smoothing (% of accel/decel time)
-P3,P3-06,0x2200:06,Speed Arrival Range,RPM,0-1000,10,Speed reached detection window
-P3,P3-07,0x2200:07,Zero Speed Range,RPM,0-100,5,Speed considered zero below this
-P3,P3-08,0x2200:08,Max Speed Limit,RPM,1-10000,3000,Software maximum speed limit
-P3,P3-09,0x2200:09,Speed Limit Source,-,0-2,0,"0=P3-08, 1=EtherCAT, 2=Analog input"
-P3,P3-10,0x2200:0A,Analog Input Gain,%,0-500,100,Analog speed command scaling
-P3,P3-11,0x2200:0B,Analog Input Offset,V,-10.0-10.0,0.0,Analog input zero offset
-P3,P3-12,0x2200:0C,Analog Input Deadband,V,0-1.0,0.05,Analog input dead zone
-P3,P3-13,0x2200:0D,Speed Polarity,-,0-1,0,"0=Normal, 1=Reverse direction"
-P3,P3-14,0x2200:0E,JOG Speed,RPM,1-10000,100,Manual jog mode speed
-P3,P3-15,0x2200:0F,Torque Limit in Speed Mode,%,0-300,300,Max torque when in speed control
-P4,P4-00,0x2300:00,Number of parameters,-,-,10,P4 group parameter count
-P4,P4-01,0x2300:01,Torque Command Source,-,0-2,0,"0=EtherCAT, 1=Analog input, 2=Internal reference"
-P4,P4-02,0x2300:02,Internal Torque Reference,%,0-300,100,Torque setpoint for internal mode (% rated)
-P4,P4-03,0x2300:03,Torque Limit (Global),%,0-300,300,Overall torque limitation
-P4,P4-04,0x2300:04,Positive Torque Limit,%,0-300,300,Maximum torque in positive direction
-P4,P4-05,0x2300:05,Negative Torque Limit,%,0-300,300,Maximum torque in negative direction
-P4,P4-06,0x2300:06,Torque Arrival Range,%,0-100,5,Torque reached detection window
-P4,P4-07,0x2300:07,Speed Limit in Torque Mode,RPM,0-10000,3000,Max speed when in torque control
-P4,P4-08,0x2300:08,Torque Polarity,-,0-1,0,"0=Normal, 1=Reverse torque direction"
-P4,P4-09,0x2300:09,Analog Torque Gain,%,0-500,100,Analog torque command scaling
-P4,P4-10,0x2300:0A,Analog Torque Offset,V,-10.0-10.0,0.0,Analog torque input zero offset
-P5,P5-00,0x2400:00,Number of parameters,-,-,25,P5 group parameter count
-P5,P5-01,0x2400:01,DI1 Function,-,0-30,0,Digital input 1 function code
-P5,P5-02,0x2400:02,DI2 Function,-,0-30,0,Digital input 2 function code
-P5,P5-03,0x2400:03,DI3 Function,-,0-30,0,Digital input 3 function code
-P5,P5-04,0x2400:04,DI4 Function,-,0-30,0,Digital input 4 function code
-P5,P5-05,0x2400:05,DI5 Function,-,0-30,0,Digital input 5 function code
-P5,P5-06,0x2400:06,DI6 Function,-,0-30,0,Digital input 6 function code
-P5,P5-07,0x2400:07,DI Polarity,-,0-63,0,"Digital inputs active level (bit0-5: 0=Active high, 1=Active low)"
-P5,P5-08,0x2400:08,DI Filter Time,ms,0-100,5,Digital input debounce filter time
-P5,P5-09,0x2400:09,DO1 Function,-,0-30,0,Digital output 1 function code
-P5,P5-10,0x2400:0A,DO2 Function,-,0-30,0,Digital output 2 function code
-P5,P5-11,0x2400:0B,DO3 Function,-,0-30,0,Digital output 3 function code
-P5,P5-12,0x2400:0C,DO4 Function,-,0-30,0,Digital output 4 function code
-P5,P5-13,0x2400:0D,DO Polarity,-,0-15,0,"Digital outputs active level (bit0-3: 0=Active high, 1=Active low)"
-P5,P5-14,0x2400:0E,Relay1 Function,-,0-30,0,Relay output 1 function code
-P5,P5-15,0x2400:0F,Relay2 Function,-,0-30,0,Relay output 2 function code
-P5,P5-16,0x2400:10,Enable Signal Mode,-,0-2,0,"0=Always enabled, 1=DI enable, 2=EtherCAT enable"
-P5,P5-17,0x2400:11,Fault Reset Mode,-,0-2,0,"0=Auto reset, 1=DI reset, 2=EtherCAT reset"
-P5,P5-18,0x2400:12,Emergency Stop Mode,-,0-2,1,"0=Quick stop, 1=Slow stop, 2=Freewheel"
-P5,P5-19,0x2400:13,Limit Switch Mode,-,0-3,0,"0=Disabled, 1=Hard stop, 2=Slow down, 3=Both limits"
-P5,P5-20,0x2400:14,Home Switch Mode,-,0-1,0,"0=Active high, 1=Active low"
-P5,P5-21,0x2400:15,Probe Input Mode,-,0-1,0,"0=Active high, 1=Active low"
-P5,P5-22,0x2400:16,Brake Output Polarity,-,0-1,0,"0=Active high release, 1=Active low release"
-P5,P5-23,0x2400:17,Alarm Output Polarity,-,0-1,0,"0=Active high fault, 1=Active low fault"
-P5,P5-24,0x2400:18,Ready Output Polarity,-,0-1,0,"0=Active high ready, 1=Active low ready"
-P5,P5-25,0x2400:19,In-Position Output Polarity,-,0-1,0,"0=Active high, 1=Active low"
-P6,P6-00,0x2500:00,Number of parameters,-,-,20,P6 group parameter count
-P6,P6-01,0x2500:01,Overvoltage Threshold,V,200-400,380,DC bus overvoltage fault level
-P6,P6-02,0x2500:02,Overvoltage Warning,V,200-400,370,DC bus overvoltage warning level
-P6,P6-03,0x2500:03,Undervoltage Threshold,V,100-300,180,DC bus undervoltage fault level
-P6,P6-04,0x2500:04,Undervoltage Warning,V,100-300,200,DC bus undervoltage warning level
-P6,P6-05,0x2500:05,Overcurrent Threshold,%,50-300,200,Instantaneous overcurrent protection (% rated)
-P6,P6-06,0x2500:06,Overload Threshold,%,50-200,150,Continuous overload protection level
-P6,P6-07,0x2500:07,Overload Detection Time,s,1-60,10,Time above overload before fault
-P6,P6-08,0x2500:08,I²t Protection Enable,-,0-1,1,"0=Disabled, 1=Enabled (thermal model)"
-P6,P6-09,0x2500:09,Position Error Limit,pulse,0-2147483647,100000,Maximum following error before fault
-P6,P6-10,0x2500:0A,Position Error Warning,pulse,0-2147483647,50000,Following error warning threshold
-P6,P6-11,0x2500:0B,Speed Error Limit,RPM,0-10000,1000,Maximum speed error before fault
-P6,P6-12,0x2500:0C,Speed Overshoot Limit,%,0-200,120,Speed overshoot protection (% of command)
-P6,P6-13,0x2500:0D,Encoder Error Action,-,0-2,1,"0=Warning, 1=Fault+disable, 2=Fault+quickstop"
-P6,P6-14,0x2500:0E,Motor Overheat Threshold,°C,50-120,90,Motor temperature fault level
-P6,P6-15,0x2500:0F,Motor Overheat Warning,°C,50-120,80,Motor temperature warning level
-P6,P6-16,0x2500:10,Driver Overheat Threshold,°C,50-100,85,Drive electronics overheat fault
-P6,P6-17,0x2500:11,Regen Overheat Threshold,°C,50-150,120,Regeneration resistor overheat fault
-P6,P6-18,0x2500:12,Fault Auto-Reset Attempts,-,0-10,0,Number of automatic fault reset tries (0=manual)
-P6,P6-19,0x2500:13,Fault Auto-Reset Delay,s,1-60,5,Time between auto-reset attempts
-P6,P6-20,0x2500:14,Safe Torque Off (STO) Action,-,0-2,2,"0=Warning, 1=Quick stop, 2=Immediate disable"
-P7,P7-00,0x2600:00,Number of parameters,-,-,15,P7 group parameter count
-P7,P7-01,0x2600:01,Homing Method,-,1-35,1,CIA402 homing method selection
-P7,P7-02,0x2600:02,Homing Speed Switch Search,RPM,1-1000,100,Speed for searching limit/home switch
-P7,P7-03,0x2600:03,Homing Speed Zero Search,RPM,1-500,50,Speed for searching encoder index pulse
-P7,P7-04,0x2600:04,Homing Acceleration,RPM/s,10-10000,1000,Acceleration/deceleration during homing
-P7,P7-05,0x2600:05,Home Offset,pulse,-2147483648-2147483647,0,Position value to set at home point
-P7,P7-06,0x2600:06,Homing Current Threshold,%,10-200,50,Current detection for mechanical stop homing
-P7,P7-07,0x2600:07,Homing Timeout,s,1-300,30,Maximum time allowed for homing sequence
-P7,P7-08,0x2600:08,Home Switch Polarity,-,0-1,0,"0=Active high, 1=Active low"
-P7,P7-09,0x2600:09,Positive Limit Switch Polarity,-,0-1,0,"0=Active high, 1=Active low"
-P7,P7-10,0x2600:0A,Negative Limit Switch Polarity,-,0-1,0,"0=Active high, 1=Active low"
-P7,P7-11,0x2600:0B,Auto-Home on Startup,-,0-1,0,"0=Disabled, 1=Execute homing after enable"
-P7,P7-12,0x2600:0C,Homing Direction,-,0-1,0,"0=Positive direction, 1=Negative direction"
-P7,P7-13,0x2600:0D,Position After Homing,pulse,-2147483648-2147483647,0,Position to move to after successful homing
-P7,P7-14,0x2600:0E,Speed After Homing,RPM,1-1000,100,Speed for move after homing completion
-P7,P7-15,0x2600:0F,Homing On Index Pulse,-,0-1,1,"0=Use switch only, 1=Use index for precision"
-P8,P8-00,0x2700:00,Number of parameters,-,-,12,P8 group parameter count
-P8,P8-01,0x2700:01,EtherCAT Station Address,-,0-65535,0,Configured station address (0=use physical address)
-P8,P8-02,0x2700:02,EtherCAT Baud Rate,-,0-3,3,"0=100Mbps, 1=Auto, 2=Reserved, 3=Auto (default)"
-P8,P8-03,0x2700:03,EtherCAT PDO Mapping Select,-,0-10,0,Preset PDO mapping configuration (0=default CSP)
-P8,P8-04,0x2700:04,EtherCAT Sync Mode,-,0-3,2,"0=Free-run, 1=SM event, 2=DC sync, 3=DC sync input based"
-P8,P8-05,0x2700:05,DC Sync0 Cycle Time,μs,125-4000,1000,Distributed clocks SYNC0 event cycle time
-P8,P8-06,0x2700:06,DC Sync1 Cycle Time,μs,0-4000,0,Distributed clocks SYNC1 event cycle (0=disabled)
-P8,P8-07,0x2700:07,Watchdog Timeout,ms,0-10000,1000,Communication watchdog timeout (0=disabled)
-P8,P8-08,0x2700:08,Watchdog Action,-,0-2,1,"0=Warning, 1=Quick stop, 2=Disable immediately"
-P8,P8-09,0x2700:09,CoE Emergency Enable,-,0-1,1,"0=Disabled, 1=Send emergency objects on faults"
-P8,P8-10,0x2700:0A,Heartbeat Producer Time,ms,0-65535,0,SDO heartbeat interval (0=disabled)
-P8,P8-11,0x2700:0B,Sync Manager Watchdog,ms,0-65535,500,SM watchdog timeout for process data
-P8,P8-12,0x2700:0C,Distributed Clock Shift Time,ns,-1000000-1000000,0,DC SYNC0 event shift adjustment
-P9,P9-00,0x2800:00,Number of parameters,-,-,15,P9 group parameter count
-P9,P9-01,0x2800:01,Display Mode,-,0-15,0,"Display selection: 0=Auto, 1=Position, 2=Speed, 3=Torque, etc"
-P9,P9-02,0x2800:02,Display Brightness,%,0-100,80,LED display brightness level
-P9,P9-03,0x2800:03,Keypad Lock,-,0-1,0,"0=Unlocked, 1=Locked (prevent parameter changes)"
-P9,P9-04,0x2800:04,Alarm History 1 (Latest),-,0-9999,0,Most recent fault code
-P9,P9-05,0x2800:05,Alarm History 2,-,0-9999,0,Second most recent fault code
-P9,P9-06,0x2800:06,Alarm History 3,-,0-9999,0,Third most recent fault code
-P9,P9-07,0x2800:07,Alarm History 4,-,0-9999,0,Fourth most recent fault code
-P9,P9-08,0x2800:08,Alarm History 5 (Oldest),-,0-9999,0,Fifth most recent fault code
-P9,P9-09,0x2800:09,Total Run Time,hours,0-999999,Read only,Cumulative drive operating hours
-P9,P9-10,0x2800:0A,Total Power-On Count,-,0-999999,Read only,Number of power-on cycles
-P9,P9-11,0x2800:0B,Total Distance,km,0-999999,Read only,Cumulative travel distance (position mode)
-P9,P9-12,0x2800:0C,Firmware Version,-,-,Read only,Drive firmware version (BCD format)
-P9,P9-13,0x2800:0D,Hardware Version,-,-,Read only,Drive hardware revision
-P9,P9-14,0x2800:0E,Serial Number,-,-,Read only,Drive unique serial number
-P9,P9-15,0x2800:0F,Manufacture Date,-,-,Read only,Drive production date (YYYYMMDD)
-PA,PA-00,0x2900:00,Number of parameters,-,-,20,PA group parameter count
-PA,PA-01,0x2900:01,Brake Control Mode,-,0-3,0,"0=No brake, 1=Auto brake, 2=Manual brake, 3=Safe brake (STO linked)"
-PA,PA-02,0x2900:02,Brake Engage Delay,ms,0-2000,100,Delay before engaging brake after motor stop
-PA,PA-03,0x2900:03,Brake Release Delay,ms,0-2000,50,Delay after releasing brake before motion
-PA,PA-04,0x2900:04,Brake Voltage Check,-,0-1,1,"0=Disabled, 1=Check brake coil voltage"
-PA,PA-05,0x2900:05,Brake Test Mode,-,0-1,0,"0=Normal, 1=Test brake holding torque"
-PA,PA-06,0x2900:06,Regeneration Resistor Power,W,0-5000,0,External regen resistor power rating (0=none)
-PA,PA-07,0x2900:07,Regen Activation Voltage,V,200-400,360,DC bus voltage to activate regen chopper
-PA,PA-08,0x2900:08,Regen Duty Cycle Limit,%,0-100,80,Maximum regen chopper duty cycle
-PA,PA-09,0x2900:09,Dead Time Compensation,%,0-200,100,PWM dead-time compensation (100=default)
-PA,PA-10,0x2900:0A,Current Loop Bandwidth,Hz,100-2000,1000,Current regulator bandwidth (advanced)
-PA,PA-11,0x2900:0B,Back-EMF Compensation Enable,-,0-1,1,"0=Disabled, 1=Enabled (improves speed accuracy)"
-PA,PA-12,0x2900:0C,Friction Compensation Mode,-,0-2,0,"0=None, 1=Static, 2=Static+dynamic"
-PA,PA-13,0x2900:0D,Static Friction Level,%,0-100,0,Static friction torque compensation (% rated)
-PA,PA-14,0x2900:0E,Dynamic Friction Coefficient,-,0-100,0,Viscous friction compensation coefficient
-PA,PA-15,0x2900:0F,Cogging Torque Compensation,-,0-1,0,"0=Disabled, 1=Enabled (reduces ripple)"
-PA,PA-16,0x2900:10,Torque Ripple Frequency,Hz,0-1000,0,Motor cogging frequency for compensation
-PA,PA-17,0x2900:11,Load Inertia Auto-Detect,-,0-1,0,"0=Manual (P2-16), 1=Auto detect on next enable"
-PA,PA-18,0x2900:12,System Resonance Frequency,Hz,0-500,0,Mechanical resonance for auto-notch (0=auto detect)
-PA,PA-19,0x2900:13,Parameter Lock Code,-,0-9999,0,Password to lock/unlock parameters (0=unlocked)
-PA,PA-20,0x2900:14,Factory Reset,-,0-1,0,"Write 1 to restore all parameters to factory defaults"
-EtherCAT,0x1C00,0x1C00:00,Sync Manager 0 Communication Type,SM0 type,-,-,Read only,Mailbox Write (master to slave)
-EtherCAT,0x1C10,0x1C10:00,Sync Manager 0 PDO Assignment,SM0 PDO,-,-,0,No PDO (mailbox only)
-EtherCAT,0x1C11,0x1C11:00,Sync Manager 1 PDO Assignment,SM1 PDO,-,-,0,No PDO (mailbox only)
-EtherCAT,0x1C12,0x1C12:00,Sync Manager 2 PDO Assignment (RxPDO),Number of assigned RxPDOs,-,0-4,1,How many RxPDO objects are active
-EtherCAT,0x1C12,0x1C12:01,RxPDO Assignment Entry 1,RxPDO 1,-,0x1600-0x1604,0x1600,First RxPDO mapping (usually 0x1600 for CSP)
-EtherCAT,0x1C12,0x1C12:02,RxPDO Assignment Entry 2,RxPDO 2,-,0x1600-0x1604,0,Second RxPDO (0=unused)
-EtherCAT,0x1C12,0x1C12:03,RxPDO Assignment Entry 3,RxPDO 3,-,0x1600-0x1604,0,Third RxPDO (0=unused)
-EtherCAT,0x1C12,0x1C12:04,RxPDO Assignment Entry 4,RxPDO 4,-,0x1600-0x1604,0,Fourth RxPDO (0=unused)
-EtherCAT,0x1C13,0x1C13:00,Sync Manager 3 PDO Assignment (TxPDO),Number of assigned TxPDOs,-,0-4,1,How many TxPDO objects are active
-EtherCAT,0x1C13,0x1C13:01,TxPDO Assignment Entry 1,TxPDO 1,-,0x1A00-0x1A04,0x1A00,First TxPDO mapping (usually 0x1A00 for CSP)
-EtherCAT,0x1C13,0x1C13:02,TxPDO Assignment Entry 2,TxPDO 2,-,0x1A00-0x1A04,0,Second TxPDO (0=unused)
-EtherCAT,0x1C13,0x1C13:03,TxPDO Assignment Entry 3,TxPDO 3,-,0x1A00-0x1A04,0,Third TxPDO (0=unused)
-EtherCAT,0x1C13,0x1C13:04,TxPDO Assignment Entry 4,TxPDO 4,-,0x1A00-0x1A04,0,Fourth TxPDO (0=unused)
-EtherCAT,0x1C32,0x1C32:00,SM2 Synchronization,SM2 sync type,-,0-3,2,"Sync mode: 0=Free-run, 1=SM event, 2=DC SYNC0, 3=DC SYNC1"
-EtherCAT,0x1C33,0x1C33:00,SM3 Synchronization,SM3 sync type,-,0-3,2,"Sync mode: 0=Free-run, 1=SM event, 2=DC SYNC0, 3=DC SYNC1"
-PDO_Map,0x1600,0x1600:00,RxPDO Mapping 1 (CSP Mode),Number of mapped entries,-,0-8,3,Number of objects in RxPDO 1
-PDO_Map,0x1600,0x1600:01,RxPDO Entry 1,Controlword,0x60400010,-,0x60400010,Object 0x6040 subindex 0 (16 bits)
-PDO_Map,0x1600,0x1600:02,RxPDO Entry 2,Mode of operation,0x60600008,-,0x60600008,Object 0x6060 subindex 0 (8 bits)
-PDO_Map,0x1600,0x1600:03,RxPDO Entry 3,Target position,0x607A0020,-,0x607A0020,Object 0x607A subindex 0 (32 bits)
-PDO_Map,0x1601,0x1601:00,RxPDO Mapping 2 (CSV Mode),Number of mapped entries,-,0-8,3,RxPDO for velocity mode
-PDO_Map,0x1601,0x1601:01,RxPDO Entry 1,Controlword,0x60400010,-,0x60400010,Object 0x6040 (16 bits)
-PDO_Map,0x1601,0x1601:02,RxPDO Entry 2,Mode of operation,0x60600008,-,0x60600008,Object 0x6060 (8 bits)
-PDO_Map,0x1601,0x1601:03,RxPDO Entry 3,Target velocity,0x60FF0020,-,0x60FF0020,Object 0x60FF (32 bits)
-PDO_Map,0x1602,0x1602:00,RxPDO Mapping 3 (CST Mode),Number of mapped entries,-,0-8,3,RxPDO for torque mode
-PDO_Map,0x1602,0x1602:01,RxPDO Entry 1,Controlword,0x60400010,-,0x60400010,Object 0x6040 (16 bits)
-PDO_Map,0x1602,0x1602:02,RxPDO Entry 2,Mode of operation,0x60600008,-,0x60600008,Object 0x6060 (8 bits)
-PDO_Map,0x1602,0x1602:03,RxPDO Entry 3,Target torque,0x60710010,-,0x60710010,Object 0x6071 (16 bits)
-PDO_Map,0x1A00,0x1A00:00,TxPDO Mapping 1 (CSP Mode),Number of mapped entries,-,0-8,4,Number of objects in TxPDO 1
-PDO_Map,0x1A00,0x1A00:01,TxPDO Entry 1,Statusword,0x60410010,-,0x60410010,Object 0x6041 (16 bits)
-PDO_Map,0x1A00,0x1A00:02,TxPDO Entry 2,Mode of operation display,0x60610008,-,0x60610008,Object 0x6061 (8 bits)
-PDO_Map,0x1A00,0x1A00:03,TxPDO Entry 3,Position actual value,0x60640020,-,0x60640020,Object 0x6064 (32 bits)
-PDO_Map,0x1A00,0x1A00:04,TxPDO Entry 4,Velocity actual value,0x606C0020,-,0x606C0020,Object 0x606C (32 bits)
-PDO_Map,0x1A01,0x1A01:00,TxPDO Mapping 2 (CSV Mode),Number of mapped entries,-,0-8,3,TxPDO for velocity mode
-PDO_Map,0x1A01,0x1A01:01,TxPDO Entry 1,Statusword,0x60410010,-,0x60410010,Object 0x6041 (16 bits)
-PDO_Map,0x1A01,0x1A01:02,TxPDO Entry 2,Mode of operation display,0x60610008,-,0x60610008,Object 0x6061 (8 bits)
-PDO_Map,0x1A01,0x1A01:03,TxPDO Entry 3,Velocity actual value,0x606C0020,-,0x606C0020,Object 0x606C (32 bits)
-PDO_Map,0x1A02,0x1A02:00,TxPDO Mapping 3 (CST Mode),Number of mapped entries,-,0-8,4,TxPDO for torque mode
-PDO_Map,0x1A02,0x1A02:01,TxPDO Entry 1,Statusword,0x60410010,-,0x60410010,Object 0x6041 (16 bits)
-PDO_Map,0x1A02,0x1A02:02,TxPDO Entry 2,Mode of operation display,0x60610008,-,0x60610008,Object 0x6061 (8 bits)
-PDO_Map,0x1A02,0x1A02:03,TxPDO Entry 3,Torque actual value,0x60770010,-,0x60770010,Object 0x6077 (16 bits)
-PDO_Map,0x1A02,0x1A02:04,TxPDO Entry 4,Position actual value,0x60640020,-,0x60640020,Object 0x6064 (32 bits)
-CIA402,0x603F,0x603F:00,Error code,Error code (read-only),-,0-65535,0,Last error code from drive
-CIA402,0x6040,0x6040:00,Controlword,Control word (write),-,0-65535,0,CIA402 control word (bit-mapped) - RxPDO
-CIA402,0x6041,0x6041:00,Statusword,Status word (read),-,0-65535,0,CIA402 status word (bit-mapped) - TxPDO
-CIA402,0x6060,0x6060:00,Modes of operation,Control mode (write),-,-8 to 10,0,"8=CSP, 9=CSV, 10=CST - RxPDO"
-CIA402,0x6061,0x6061:00,Modes of operation display,Mode display (read),-,-8 to 10,0,Current active operation mode - TxPDO
-CIA402,0x6062,0x6062:00,Position demand value,Position command internal,Command Unit,-2147483648-2147483647,0,Internal position setpoint before feedforward
-CIA402,0x6064,0x6064:00,Position actual value,Position feedback,Command Unit,-2147483648-2147483647,0,Actual motor position - TxPDO
-CIA402,0x6065,0x6065:00,Following error window,Max position deviation,Command Unit,0-4294967295,100000,Maximum allowed following error before fault
-CIA402,0x6067,0x6067:00,Position window,Position arrival threshold,Encoder unit,0-4294967295,100,Position considered reached within this window
-CIA402,0x6068,0x6068:00,Position window time,Position arrival time,ms,0-65535,0,Time to remain in window before in-position (0=immediate)
-CIA402,0x606C,0x606C:00,Velocity actual value,Actual speed,Command Unit/s,-2147483648-2147483647,0,Actual motor velocity - TxPDO
-CIA402,0x6071,0x6071:00,Target torque,Torque command,0.1% of rated,-32768-32767,0,Target torque (CST mode)
-CIA402,0x6072,0x6072:00,Max torque,Maximum torque limit,0.1% of rated,0-65535,300,Global maximum torque (all modes)
-CIA402,0x6077,0x6077:00,Torque actual value,Torque feedback,0.1% of rated,-32768-32767,0,Actual motor torque - TxPDO
-CIA402,0x607A,0x607A:00,Target position,Position command,Command Unit,-2147483648-2147483647,0,Target position (CSP mode) - RxPDO
-CIA402,0x607D,0x607D:01,Min position limit,Software negative limit,Command Unit,-2147483648-2147483647,-2147483648,Software limit negative direction
-CIA402,0x607D,0x607D:02,Max position limit,Software positive limit,Command Unit,-2147483648-2147483647,2147483647,Software limit positive direction
-CIA402,0x607F,0x607F:00,Max profile velocity,Maximum speed,Command Unit/s,0-4294967295,300000,Maximum velocity limit (all modes)
-CIA402,0x6081,0x6081:00,Profile velocity,Profile velocity,Command Unit/s,0-4294967295,0,Velocity for profile position modes
-CIA402,0x6083,0x6083:00,Profile acceleration,Profile acceleration,Command Unit/s²,0-4294967295,0,Acceleration for profile modes
-CIA402,0x6084,0x6084:00,Profile deceleration,Profile deceleration,Command Unit/s²,0-4294967295,0,Deceleration for profile modes
-CIA402,0x6091,0x6091:01,Gear ratio - Motor revolutions,Motor resolution,pulse/rev,1-4294967295,131072,Encoder pulses per motor revolution
-CIA402,0x6091,0x6091:02,Gear ratio - Shaft revolutions,Axis resolution,units/rev,1-4294967295,1,User units per shaft revolution (for gearing)
-CIA402,0x60B0,0x60B0:00,Position offset,Position offset,Command Unit,-2147483648-2147483647,0,Offset added to position command
-CIA402,0x60B1,0x60B1:00,Velocity offset,Speed offset,Command Unit/s,-2147483648-2147483647,0,Offset added to velocity command
-CIA402,0x60B2,0x60B2:00,Torque offset,Torque offset,0.1% of rated,-32768-32767,0,Offset added to torque command
-CIA402,0x60B8,0x60B8:00,Touch probe function,Touch probe config,-,0-65535,0,Touch probe/latch configuration
-CIA402,0x60E0,0x60E0:00,Positive torque limit value,Forward torque limit,0.1% of rated,0-65535,300,Maximum torque in positive direction
-CIA402,0x60E1,0x60E1:00,Negative torque limit value,Reverse torque limit,0.1% of rated,0-65535,300,Maximum torque in negative direction
-CIA402,0x60F4,0x60F4:00,Following error actual value,Position deviation,Command Unit,-2147483648-2147483647,0,Current position tracking error - TxPDO possible
-CIA402,0x60FC,0x60FC:00,Position demand value,Position command internal,Encoder unit,-2147483648-2147483647,0,Internal trajectory generator position - TxPDO possible
-CIA402,0x60FD,0x60FD:00,Digital inputs,Input IO status,-,0-4294967295,0,Digital input states (bit-mapped) - TxPDO possible
-CIA402,0x60FE,0x60FE:01,Digital outputs - Physical outputs,Digital outputs physical,-,0-4294967295,0,Physical output states
-CIA402,0x60FE,0x60FE:02,Digital outputs - Bit mask,Digital outputs mask,-,0-4294967295,0,Bit mask for output control
-CIA402,0x60FF,0x60FF:00,Target velocity,Velocity command,Command Unit/s,-2147483648-2147483647,0,Target velocity (CSV mode) - RxPDO
-CSP_Control,0x6063,0x6063:00,Position actual internal value,Position feedback (encoder),Encoder unit,-2147483648-2147483647,0,Raw encoder position feedback - alternative to 0x6064
-CSP_Control,0x2007,0x2007:06,Torque filter time constant,Torque filtering,ms,0.0-10.0,0.5,First-order low-pass filter for torque feedback/command
-CSP_Control,0x2008,0x2008:01,Speed regulator Kp,Speed loop Kp (alternative),Hz,1-2000,100,Speed loop proportional gain (same as P2-04)
-CSP_Control,0x2008,0x2008:02,Speed regulator Ki,Speed loop Ki (alternative),Hz,1-10000,500,Speed loop integral gain (same as P2-05)
-CSP_Control,0x2008,0x2008:03,Position gain,Position control gain,1/s,1-2000,100,Position loop gain (CSP control diagram)
-CSP_Control,0x2008,0x2008:13,Speed filtering,Speed filter time constant,ms,0.0-10.0,1.0,First-order low-pass filter for speed calculation
-CSP_Control,0x2008,0x2008:14,Speed feedforward,Velocity feedforward gain,%,0-200,0,Feedforward gain for velocity compensation
-CSP_Control,0x2008,0x2008:15,Torque feedforward filtering,Torque FF filter,ms,0.0-10.0,0.5,Filter time constant for torque feedforward path
-CSP_Control,0x2008,0x2008:16,Torque feedforward gain,Torque FF gain,%,0-200,0,Feedforward gain for torque compensation
+Group,Function code ,Parameter name,Unit,Set value,Set Range,Default value ,Description,Code
+P02,P02-00,Control mode selection,?,9,1~6,1,?,?
+P02,P02-01,Encoder type selection,?,1,0~1,0,?,?
+P02,P02-02,Rotation direction selection,?,0,0~1,0,?,?
+P02,P02-03,Output pulse phase,?,0,0~1,0,?,?
+P02,P02-05,"Servo enable OFF, shutdown mode selection",?,0,0~1,0,?,?
+P02,P02-06,Fault No.2 Shutdown Method Selection,?,0,0~1,0,?,?
+P02,P02-07,Selection of overtravel shutdown mode,?,1,0~2,1,?,?
+P02,P02-09,Delay from holding brake output ON to command reception,?,250,0~500,250,?,?
+P02,P02-10,"Static state, holding brake output OFF to motor dead time delay",?,150,1~1000,150,?,?
+P02,P02-11,"Rotating state, holding brake output OFF speed threshold",?,30,0~3000,30,?,?
+P02,P02-12,"Rotation status, servo enable OFF to brake output OFF delay",?,500,1~1000,500,?,?
+P02,P02-15,LED warning display selection,?,0,0~1,0,?,?
+P02,P02-18,Servo enable (S-ON) filtering time constant,?,0,0~64,0,?,?
+P02,P02-24,Resistance heat dissipation coefficient,?,30,10~100,30,?,?
+P02,P02-25,Braking resistor setting,?,0,0~3,0,?,?
+P02,P02-26,External braking resistor power,?,40,1~65535,40,?,?
+P02,P02-27,External braking resistance value,?,50,1~1000,50,?,?
+P02,P02-32,Panel default display function,?,50,0~99,50,?,?
+P02,P02-38,Fault short circuit braking time,?,2000,0~30000,2000,?,?
+P02,P02-39,Fault short circuit braking threshold,?,100,0~3000,100,?,?
+P03,P03-00,Effective DI function allocation when powered on 1,?,0,0~65535,0,?,?
+P03,P03-01,Effective DI function allocation when powered on 2,?,0,0~65535,0,?,?
+P03,P03-02,DI1 terminal function selection,?,14,0~37,1,?,?
+P03,P03-03,DI1 terminal logic selection,?,0,0~4,0,?,?
+P03,P03-04,DI2 terminal function selection,?,15,0~37,14,?,?
+P03,P03-05,DI2 terminal logic selection,?,0,0~4,0,?,?
+P03,P03-06,DI3 terminal function selection,?,31,0~37,15,?,?
+P03,P03-07,DI3 terminal logic selection,?,0,0~4,0,?,?
+P03,P03-08,DI4 terminal function selection,?,0,0~37,2,?,?
+P03,P03-09,DI4 terminal logic selection,?,0,0~4,0,?,?
+P03,P03-10,DI5 terminal function selection,?,0,0~37,26,?,?
+P03,P03-11,DI5 terminal logic selection,?,0,0~4,0,?,?
+P03,P03-12,DI6 terminal function selection,?,0,0~37,34,?,?
+P03,P03-13,DI6 terminal logic selection,?,0,0~4,0,?,?
+P03,P03-14,DI7 terminal function selection,?,0,0~37,31,?,?
+P03,P03-15,DI7 terminal logic selection,?,0,0~4,0,?,?
+P03,P03-16,DI8 terminal function selection,?,0,0~37,32,?,?
+P03,P03-17,DI8 terminal logic selection,?,0,0~4,0,?,?
+P03,P03-34,Effective DI function allocation when powered on 3,?,0,0~65535,0,?,?
+P03,P03-35,Effective DI function allocation when powered on 4,?,0,0~65535,0,?,?
+P03,P03-36,AI1 bias,?,0,-5000~5000,0,?,?
+P03,P03-37,AI1 input filtering time constant,?,0,0~655.35,2,?,?
+P03,P03-38,AI1 input median filtering enable,?,0,0~1,1,?,?
+P03,P03-39,AI1 Deadband,?,0,0~1000.0,10,?,?
+P03,P03-40,AI1 zero drift,?,0,-500.0~500.0,0,?,?
+P03,P03-41,AI2 bias,?,0,-5000~5000,0,?,?
+P03,P03-42,AI2 input filtering time constant,?,0,0~655.35,2,?,?
+P03,P03-43,AI2 input median filtering enable,?,0,0~1,1,?,?
+P03,P03-44,AI2 Deadband,?,0,0~1000.0,10,?,?
+P03,P03-45,AI2 zero drift,?,0,-500.0~500.0,0,?,?
+P03,P03-51,Speed value corresponding to analog quantity 10V,?,200,0~9000,3000,?,?
+P03,P03-52,Analog quantity 10V corresponds to torque value,?,0.01,1.00~8.00,1,?,?
+P04,P04-00,DO1 terminal function selection,?,1,0~20,1,?,?
+P04,P04-01,DO1 terminal logic selection,?,0,0~1,0,?,?
+P04,P04-02,DO2 terminal function selection,?,5,0~20,5,?,?
+P04,P04-03,DO2 terminal logic selection,?,0,0~1,0,?,?
+P04,P04-04,DO3 terminal function selection,?,3,0~20,3,?,?
+P04,P04-05,DO3 terminal logic selection,?,0,0~1,0,?,?
+P04,P04-06,DO4 terminal function selection,?,0,0~20,11,?,?
+P04,P04-07,DO4 terminal logic selection,?,0,0~1,0,?,?
+P04,P04-08,DO5 terminal function selection,?,0,0~20,16,?,?
+P04,P04-09,DO5 terminal logic selection,?,0,0~1,0,?,?
+P04,P04-10,DO6 terminal function selection,?,0,0~20,9,?,?
+P04,P04-11,DO6 terminal logic selection,?,0,0~1,0,?,?
+P05,P05-00,Location command source,?,0,0~2,0,?,?
+P05,P05-02,Number of position commands per 1 revolution of the motor,?,0,0 ~1048576,10000,?,?
+P05,P05-04,First order low-pass filtering time constant,?,0,0~6553.5,0,?,?
+P05,P05-05,Step quantity,?,50,-9999 ~9999,50,?,?
+P05,P05-06,Mean filtering time constant,?,0,0.0~128.0,0,?,?
+P05,P05-07,Electronic tooth ratio 1 (molecular),?,131072,1~1073741824,10000,?,?
+P05,P05-09,Electronic tooth ratio 1 (denominator),?,10000,1~1073741824,10000,?,?
+P05,P05-11,Electronic tooth ratio 2 (molecular),?,131072,1~1073741824,10000,?,?
+P05,P05-13,Electronic tooth ratio 2 (denominator),?,10000,1~1073741824,10000,?,?
+P05,P05-15,Pulse instruction form,?,2,0~4,0,?,?
+P05,P05-16,Clear Action Selection,?,0,0~2,0,?,?
+P05,P05-17,Encoder frequency division pulse count,?,2500,35 ~32767,2500,?,?
+P05,P05-19,Speed feedforward control selection,?,1,0~3,1,?,?
+P05,P05-20,Positioning completion output conditions,?,0,0~3,0,?,?
+P05,P05-21,Positioning completion threshold,?,92,1 ~65535,92,?,?
+P05,P05-22,Positioning approach threshold,?,65535,1 ~65535,65535,?,?
+P05,P05-30,Origin reset enable control,?,0,0~8,0,?,?
+P05,P05-31,Origin reset mode,?,0,0~13,0,?,?
+P05,P05-32,Speed of high-speed search origin switch signal,?,100,0~3000,100,?,?
+P05,P05-33,The speed of the low-speed search origin switch signal,?,10,0~1000,10,?,?
+P05,P05-34,Acceleration and deceleration time when searching for the origin,?,1000,0~1000,1000,?,?
+P05,P05-35,Limit the time to find the origin,?,50000,0~65535,10000,?,?
+P05,P05-36,Mechanical origin offset,?,0,-1073741824 ~1073741824,0,?,?
+P05,P05-38,Selection of servo pulse output source,?,0,0~2,0,?,?
+P05,P05-39,Electronic gear ratio switching conditions,?,0,0~1,0,?,?
+P05,P05-40,Mechanical origin offset and limit handling method,?,0,0~3,0,?,?
+P05,P05-46,Absolute position linear mode position offset (low 32 bits),?,0,-2147483648~2147483647,0,?,?
+P05,P05-48,Absolute position linear mode position offset (high 32 bits),?,0,-2147483648~2147483647,0,?,?
+P05,P05-50,Absolute position rotation mode mechanical gear ratio (numerator),?,1,1~65535,1,?,?
+P05,P05-51,Absolute position rotation mode mechanical gear ratio (denominator),?,1,1~65535,1,?,?
+P05,P05-52,Absolute position rotation mode: Number of pulses for one revolution of load rotation (low 32 bits),?,0,0~ 4294967295,0,?,?
+P05,P05-54,Absolute position rotation mode: Number of pulses for one revolution of load rotation (high 32 bits),?,0,0~ 127,0,?,?
+P05,P05-56,Threshold for judging the speed of touch stop return to zero,?,2,0~1000,2,?,?
+P05,P05-58,Touch stop return to zero torque limit,?,100,0~300.0,100,?,?
+P05,P05-59,Positioning completion window time,?,0,0~30000,0,?,?
+P05,P05-60,Positioning completion hold time,?,0,0~30000,0,?,?
+P05,P05-61,Limit the selection of time units for finding the origin,?,1,0~2,1,?,?
+P06,P06-00,Main speed command A source,?,0,0~2,0,?,?
+P06,P06-01,Auxiliary speed command B source,?,0,0~5,1,?,?
+P06,P06-02,Speed command selection,?,0,0~3,0,?,?
+P06,P06-03,Speed command keyboard setting value,?,200,-6000~6000,200,?,?
+P06,P06-04,Inching speed setting value,?,100,0~6000,100,?,?
+P06,P06-05,Speed command acceleration ramp time constant,?,200,0~65535,200,?,?
+P06,P06-06,Speed command deceleration ramp time constant,?,200,0~65535,200,?,?
+P06,P06-07,Maximum speed threshold,?,6000,0~6000,6000,?,?
+P06,P06-08,Forward speed threshold,?,6000,0~6000,6000,?,?
+P06,P06-09,Reverse speed threshold,?,6000,0~6000,6000,?,?
+P06,P06-11,Selection of torque feedforward control,?,1,0~1,1,?,?
+P06,P06-15,Zero fixed speed threshold,?,10,0~6000,10,?,?
+P06,P06-16,Motor rotation speed threshold,?,20,0~1000,20,?,?
+P06,P06-17,Speed consistent signal threshold,?,10,0~100,10,?,?
+P06,P06-18,Speed reaches signal threshold,?,1000,10~6000,1000,?,?
+P06,P06-19,Zero speed output signal threshold,?,10,1~6000,10,?,?
+P07,P07-00,Main torque command A source,?,0,0~2,0,?,?
+P07,P07-01,Auxiliary torque command B source,?,0,0~2,1,?,?
+P07,P07-02,Torque command selection,?,0,0~4,0,?,?
+P07,P07-03,Torque command keyboard setting value,?,0,-300.0~300.0,0,?,?
+P07,P07-05,Torque command filtering time constant,?,0.79,0~30.00,0.79,?,?
+P07,P07-06,Second torque command filtering time constant,?,0.79,0~30.00,0.79,?,?
+P07,P07-07,Source of torque limitation,?,2,0~4,0,?,?
+P07,P07-08,T-lmt selection,?,0,1~2,2,?,?
+P07,P07-09,Positive internal torque limit,?,300,0.0~300.0,300,?,?
+P07,P07-10,Negative internal torque limit,?,300,0.0~300.0,300,?,?
+P07,P07-11,Positive external torque limit,?,300,0.0~300.0,300,?,?
+P07,P07-12,Negative external torque limit,?,300,0.0~300.0,300,?,?
+P07,P07-17,Speed limit source selection,?,1,0~2,0,?,?
+P07,P07-18,V-lmt selection,?,0,1~2,1,?,?
+P07,P07-19,Torque control forward speed limit/torque control speed limit 1,?,3000,0~6000,3000,?,?
+P07,P07-20,Torque control negative speed limit/torque control speed limit 2,?,3000,0~6000,3000,?,?
+P07,P07-21,Torque reaches reference value,?,0,0.0~300.0,0,?,?
+P07,P07-22,Torque reaches effective value,?,20,0.0~300.0,20,?,?
+P07,P07-23,Torque reaches invalid value,?,10,0.0~300.0,10,?,?
+P07,P07-40,Speed limit window in torque mode,?,1,0.5~30.0,3,?,?
+P08,P08-00,Speed loop gain,?,50,0.1~2000.0,25,?,?
+P08,P08-01,Integral time constant of velocity loop,?,31.83,0.15~512.00,31.83,?,?
+P08,P08-02,Position loop gain,?,40,0.0~2000.0,40,?,?
+P08,P08-03,2nd speed loop gain,?,40,0.1~2000.0,40,?,?
+P08,P08-04,Integral time constant of the second speed loop,?,20,0.15~512.00,20,?,?
+P08,P08-05,2nd position loop gain,?,64,0.0~2000.0,64,?,?
+P08,P08-08,Second gain mode setting,?,1,0~1,1,?,?
+P08,P08-09,Gain switching condition selection,?,0,0~10,0,?,?
+P08,P08-10,Gain switching delay time,?,5,0.0~1000.0,5,?,?
+P08,P08-11,Gain switching level,?,50,0~20000,50,?,?
+P08,P08-12,Gain switching delay,?,30,0~20000,30,?,?
+P08,P08-13,Position gain switching time,?,3,0.0~1000.0,3,?,?
+P08,P08-15,Load moment of inertia ratio,?,1,0.00~120.00,2,?,?
+P08,P08-18,Velocity feedforward filtering time constant,?,0.5,0.00~64.00,0.5,?,?
+P08,P08-19,Speed feedforward gain,?,0,0.0~100.0,0,?,?
+P08,P08-20,Torque feedforward filtering time constant,?,0.5,0.00~64.00,0.5,?,?
+P08,P08-21,Torque feedforward gain,?,0,0.0~200.0,0,?,?
+P08,P08-22,Speed feedback filtering options,?,0,0~4,0,?,?
+P08,P08-23,Speed feedback low pass filter cutoff frequency,?,4000,100~4000,4000,?,?
+P08,P08-24,Pseudo differential feedforward control coefficient,?,100,0.0~100.0,100,?,?
+P09,P09-01,Rigidity grade selection,?,12,0~31,12,?,?
+P09,P09-02,Adaptive notch filter mode selection,?,0,0~4,0,?,?
+P09,P09-04,Low frequency resonance suppression mode selection,?,0,0~1,0,?,?
+P09,P09-05,Off line inertia identification mode selection,?,0,0~1,0,?,?
+P09,P09-06,Maximum speed of inertia identification,?,500,100~1000,500,?,?
+P09,P09-07,Acceleration to maximum speed time constant during inertia identification,?,125,20~800,125,?,?
+P09,P09-12,Group 1 notch filter frequency,?,4000,0.00~2.00,4000,?,?
+P09,P09-13,Group 1 notch width class,?,2,50~4000,2,?,?
+P09,P09-14,Group 1 notch depth class,?,0,0~20,0,?,?
+P09,P09-15,Group 2 notch filter frequency,?,4000,0~99,4000,?,?
+P09,P09-16,Group 2 notch width class,?,2,50~4000,2,?,?
+P09,P09-17,Group 2 notch depth class,?,0,0~20,0,?,?
+P09,P09-18,Group 3 notch filter frequency,?,4000,0~99,4000,?,?
+P09,P09-19,Group 3 notch width class,?,2,50~4000,2,?,?
+P09,P09-20,Group 3 notch depth class,?,0,0~20,0,?,?
+P09,P09-21,Group 4 notch filter frequency,?,4000,0~99,4000,?,?
+P09,P09-22,Group 4 notch width class,?,2,50~4000,2,?,?
+P09,P09-23,Group 4 notch depth class,?,0,0~20,0,?,?
+P09,P09-30,Torque disturbance compensation gain,?,0,0~99,0,?,?
+P09,P09-31,Filtering time constant of torque disturbance observer,?,0.5,0~2,0.5,?,?
+P09,P09-38,Low frequency resonance frequency,?,100,0.0~100.0,100,?,?
+P09,P09-39,Low frequency resonance frequency filtering setting,?,2,0.00~25.00,2,?,?
+P0A,P0A-00,Power input phase loss protection selection,?,0,1.0~100.0,2,?,?
+P0A,P0A-03,Power down saving function enable selection,?,0,0~10,0,?,?
+P0A,P0A-04,Motor overload protection gain,?,100,50~300,100,?,?
+P0A,P0A-08,Overspeed fault threshold,?,0,0~10000,0,?,?
+P0A,P0A-09,Maximum position pulse frequency,?,1000,100~4000,4000,?,?
+P0A,P0A-10,Excessive position deviation fault threshold,?,429483,1 ~1073741824,429483,?,?
+P0A,P0A-12,Enable the runaway protection function,?,1,0~1,1,?,?
+P0A,P0A-16,Low frequency resonance position deviation judgment threshold,?,5,1~1000,5,?,?
+P0A,P0A-24,Low speed pulse input pin filtering time constant,?,0,0~255,30,?,?
+P0A,P0A-25,Filtering time constant of speed feedback display value,?,50,0~5000,50,?,?
+P0A,P0A-26,Motor overload shielding enable,?,0,0~1,0,?,?
+P0A,P0A-27,Velocity do filtering time constant,?,10,0~5000,10,?,?
+P0A,P0A-28,Filtering time constant of quadrature encoder,?,5,0~255,30,?,?
+P0A,P0A-30,High speed pulse input pin filtering time constant,?,3,0~255,3,?,?
+P0A,P0A-32,Blocking temperature protection time window,?,200,10~65535,200,?,?
+P0A,P0A-33,Blocking temperature protection enable,?,1,0~1,1,?,?
+P0A,P0A-36,Encoder multi turn overflow fault selection,?,0,0~1,0,?,?
+P0C,P0C-00,Servo axis address,?,1,1~247,1,?,?
+P0C,P0C-02,Serial baud rate setting,?,3,0~5,3,?,?
+P0C,P0C-03,Moubus data format,?,1,0~3,0,?,?
+P0C,P0C-09,Communication VDI,?,0,0~1,0,?,?
+P0C,P0C-10,VDI default value after power on,?,0,0~65535,0,?,?
+P0C,P0C-11,Communication VDO,?,0,0~1,0,?,?
+P0C,P0C-12,Default level when VDO function is selected as 0,?,0,0~65535,0,?,?
+P0C,P0C-13,Whether moubus communication write function code is updated to EEPROM,?,3,0~1,1,?,?
+P0C,P0C-25,Moubus instruction response delay,?,1,0~5000,1,?,?
+P0C,P0C-26,High and low order of moubus communication data,?,1,0~1,1,?,?
+P0C,P0C-30,Moubus error frame format selection,?,1,0~1,1,?,?
+P0D,P0D-00,Software reset,?,0,0~1,0,?,?
+P0D,P0D-01,Fault reset,?,0,0~1,0,?,?
+P0D,P0D-03,Initial angle identification,?,0,0~1,0,?,?
+P0D,P0D-05,Emergency stop,?,0,0~1,0,?,?
+P0D,P0D-17,Dido forced input/output enable,?,0,0~3,0,?,?
+P0D,P0D-18,Di forced input given,?,447,0~511,0x01FF,?,?
+P0D,P0D-19,Do forced output given,?,0,0~31,0,?,?
+P0D,P0D-20,Absolute encoder reset enable,?,0,0~2,0,?,?
+P11,P11-00,Multi section position operation mode,?,1,0~3,1,?,?
+P11,P11-01,Number of end segments of displacement command,?,1,1~16,1,?,?
+P11,P11-02,Margin handling method,?,0,0~1,0,?,?
+P11,P11-03,Time unit,?,0,0~1,0,?,?
+P11,P11-04,Displacement command type selection,?,0,0~1,0,?,?
+P11,P11-05,Selection of start segment for sequential operation,?,0,0~16,0,?,?
+P11,P11-12,Movement displacement of the first segment,?,10000,-1073741824 ~1073741824,60000,?,?
+P11,P11-14,Maximum operating speed of the first segment displacement,?,200,1~6000,200,?,?
+P11,P11-15,Acceleration and deceleration time of the first segment displacement,?,10,0~65535,10,?,?
+P11,P11-16,Waiting time after the first segment displacement is completed,?,10,0~10000,10,?,?
+P11,P11-17,Movement displacement of the second segment,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-19,Maximum operating speed of the second segment displacement,?,200,1~6000,200,?,?
+P11,P11-20,Acceleration and deceleration time of the second segment displacement,?,10,0~65535,10,?,?
+P11,P11-21,Waiting time after the second segment displacement is completed,?,10,0~10000,10,?,?
+P11,P11-22,Movement displacement of the third segment,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-24,Maximum operating speed of the third segment displacement,?,200,1~6000,200,?,?
+P11,P11-25,Acceleration and deceleration time of the third segment displacement,?,10,0~65535,10,?,?
+P11,P11-26,Waiting time after the completion of the third segment displacement,?,10,0~10000,10,?,?
+P11,P11-27,Segment 4 movement displacement,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-29,Maximum operating speed of the fourth segment displacement,?,200,1~6000,200,?,?
+P11,P11-30,Acceleration and deceleration time of the fourth segment displacement,?,10,0~65535,10,?,?
+P11,P11-31,Waiting time after the fourth segment displacement is completed,?,10,0~10000,10,?,?
+P11,P11-32,Segment 5 movement displacement,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-34,Maximum operating speed of the 5th segment displacement,?,200,1~6000,200,?,?
+P11,P11-35,Acceleration and deceleration time of the fifth segment displacement,?,10,0~65535,10,?,?
+P11,P11-36,Waiting time after the fifth segment displacement is completed,?,10,0~10000,10,?,?
+P11,P11-37,Segment 6 movement displacement,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-39,Maximum operating speed of the 6th segment displacement,?,200,1~6000,200,?,?
+P11,P11-40,Acceleration and deceleration time of the sixth segment displacement,?,10,0~65535,10,?,?
+P11,P11-41,Waiting time after the displacement of the sixth segment is completed,?,10,0~10000,10,?,?
+P11,P11-42,Segment 7 movement displacement,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-44,Maximum operating speed of the 7th segment displacement,?,200,1~6000,200,?,?
+P11,P11-45,Acceleration and deceleration time of the 7th segment displacement,?,10,0~65535,10,?,?
+P11,P11-46,Waiting time after the displacement of the seventh segment is completed,?,10,0~10000,10,?,?
+P11,P11-47,Segment 8 movement displacement,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-49,Maximum operating speed of the 8th segment displacement,?,200,1~6000,200,?,?
+P11,P11-50,Acceleration and deceleration time of segment 8 displacement,?,10,0~65535,10,?,?
+P11,P11-51,Waiting time after the displacement of the 8th segment is completed,?,10,0~10000,10,?,?
+P11,P11-52,Segment 9 movement displacement,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-54,Maximum operating speed of segment 9 displacement,?,200,1~6000,200,?,?
+P11,P11-55,Acceleration and deceleration time of the 9th segment displacement,?,10,0~65535,10,?,?
+P11,P11-56,Waiting time after the completion of the 9th segment displacement,?,10,0~10000,10,?,?
+P11,P11-57,Segment 10 movement displacement,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-59,Maximum operating speed of the 10th segment displacement,?,200,1~6000,200,?,?
+P11,P11-60,Acceleration and deceleration time of the 10th segment displacement,?,10,0~65535,10,?,?
+P11,P11-61,Waiting time after the completion of the 10th segment displacement,?,10,0~10000,10,?,?
+P11,P11-62,Segment 11 movement displacement,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-64,Maximum operating speed of the 11th segment displacement,?,200,1~6000,200,?,?
+P11,P11-65,Acceleration and deceleration time of the 11th segment displacement,?,10,0~65535,10,?,?
+P11,P11-66,Waiting time after the 11th segment displacement is completed,?,10,0~10000,10,?,?
+P11,P11-67,Movement displacement of the 12th segment,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-69,Maximum operating speed of the 12th segment displacement,?,200,1~6000,200,?,?
+P11,P11-70,Acceleration and deceleration time of the 12th segment displacement,?,10,0~65535,10,?,?
+P11,P11-71,Waiting time after the completion of the 12th segment displacement,?,10,0~10000,10,?,?
+P11,P11-72,Movement displacement of the 13th segment,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-74,Maximum operating speed of the 13th segment displacement,?,200,1~6000,200,?,?
+P11,P11-75,Acceleration and deceleration time of the 13th segment displacement,?,10,0~65535,10,?,?
+P11,P11-76,Waiting time after the 13th segment displacement is completed,?,10,0~10000,10,?,?
+P11,P11-77,Segment 14 movement displacement,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-79,Maximum operating speed of the 14th segment displacement,?,200,1~6000,200,?,?
+P11,P11-80,Acceleration and deceleration time of the 14th segment displacement,?,10,0~65535,10,?,?
+P11,P11-81,Waiting time after the displacement of the 14th segment is completed,?,10,0~10000,10,?,?
+P11,P11-82,Segment 15 movement displacement,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-84,Maximum operating speed of the 15th segment displacement,?,200,1~6000,200,?,?
+P11,P11-85,Acceleration and deceleration time of the 15th segment displacement,?,10,0~65535,10,?,?
+P11,P11-86,Waiting time after the 15th segment displacement is completed,?,10,0~10000,10,?,?
+P11,P11-87,Movement displacement of the 16th segment,?,10000,-1073741824 ~1073741824,10000,?,?
+P11,P11-89,Maximum operating speed of the 16th segment displacement,?,200,1~6000,200,?,?
+P11,P11-90,Acceleration and deceleration time of the 16th segment displacement,?,10,0~65535,10,?,?
+P11,P11-91,Waiting time after the 16th segment displacement is completed,?,10,0~10000,10,?,?
+P12,P12-00,Multi segment speed command operation mode,?,1,0~2,1,?,?
+P12,P12-01,Speed command end segment number selection,?,16,1~16,16,?,?
+P12,P12-02,Running time unit selection,?,0,0~1,0,?,?
+P12,P12-03,Acceleration time 1,?,10,0~65535,10,?,?
+P12,P12-04,Deceleration time 1,?,10,0~65535,10,?,?
+P12,P12-05,Acceleration time 2,?,50,0~65535,50,?,?
+P12,P12-06,Deceleration time 2,?,50,0~65535,50,?,?
+P12,P12-07,Acceleration time 3,?,100,0~65535,100,?,?
+P12,P12-08,Deceleration time 3,?,100,0~65535,100,?,?
+P12,P12-09,Acceleration time 4,?,150,0~65535,150,?,?
+P12,P12-10,Deceleration time 4,?,150,0~65535,150,?,?
+P12,P12-20,1st speed command,?,0,-6000~6000,0,?,?
+P12,P12-21,Running time of the first segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-22,Acceleration and deceleration time of the first segment,?,0,0~4,0,?,?
+P12,P12-23,2nd speed command,?,100,-6000~6000,100,?,?
+P12,P12-24,Running time of the second segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-25,Acceleration and deceleration time of the second segment,?,0,0~4,0,?,?
+P12,P12-26,3rd speed command,?,300,-6000~6000,300,?,?
+P12,P12-27,Running time of the third segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-28,Acceleration and deceleration time of the third segment,?,0,0~4,0,?,?
+P12,P12-29,4th speed command,?,500,-6000~6000,500,?,?
+P12,P12-30,Running time of the 4th segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-31,Acceleration and deceleration time of the fourth segment,?,0,0~4,0,?,?
+P12,P12-32,5th speed command,?,700,-6000~6000,700,?,?
+P12,P12-33,Running time of the 5th segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-34,Acceleration and deceleration time of the fifth segment,?,0,0~4,0,?,?
+P12,P12-35,6th speed command,?,900,-6000~6000,900,?,?
+P12,P12-36,Running time of the 6th segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-37,Acceleration and deceleration time of the sixth segment,?,0,0~4,0,?,?
+P12,P12-38,Segment 7 speed command,?,600,-6000~6000,600,?,?
+P12,P12-39,Segment 7 command running time,?,5,0~6553.5,5,?,?
+P12,P12-40,Acceleration and deceleration time of the seventh segment,?,0,0~4,0,?,?
+P12,P12-41,Segment 8 speed command,?,300,-6000~6000,300,?,?
+P12,P12-42,Running time of the 8th segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-43,Acceleration and deceleration time of the 8th segment,?,0,0~4,0,?,?
+P12,P12-44,Segment 9 speed command,?,100,-6000~6000,100,?,?
+P12,P12-45,Segment 9 instruction running time,?,5,0~6553.5,5,?,?
+P12,P12-46,Acceleration and deceleration time of the 9th segment,?,0,0~4,0,?,?
+P12,P12-47,10th speed command,?,-100,-6000~6000,-100,?,?
+P12,P12-48,Running time of the 10th segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-49,Acceleration and deceleration time of the 10th segment,?,0,0~4,0,?,?
+P12,P12-50,11th speed command,?,-300,-6000~6000,-300,?,?
+P12,P12-51,Run time of the 11th segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-52,Acceleration and deceleration time of the 11th segment,?,0,0~4,0,?,?
+P12,P12-53,Segment 12 speed command,?,-500,-6000~6000,-500,?,?
+P12,P12-54,Running time of the 12th segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-55,Acceleration and deceleration time of the 12th segment,?,0,0~4,0,?,?
+P12,P12-56,Segment 13 speed command,?,-700,-6000~6000,-700,?,?
+P12,P12-57,Running time of the 13th segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-58,Acceleration and deceleration time of the 13th segment,?,0,0~4,0,?,?
+P12,P12-59,Segment 14 speed command,?,-900,-6000~6000,-900,?,?
+P12,P12-60,Segment 14 instruction running time,?,5,0~6553.5,5,?,?
+P12,P12-61,Acceleration and deceleration time of the 14th segment,?,0,0~4,0,?,?
+P12,P12-62,Segment 15 speed command,?,-600,-6000~6000,-600,?,?
+P12,P12-63,Run time of the 15th segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-64,Acceleration and deceleration time of the 15th segment,?,0,0~4,0,?,?
+P12,P12-65,16th speed command,?,-300,-6000~6000,-300,?,?
+P12,P12-66,Running time of the 16th segment instruction,?,5,0~6553.5,5,?,?
+P12,P12-67,Acceleration and deceleration time of the 16th segment,?,0,0~4,0,?,?
+P17,P17-00,Vdi1 terminal function selection,?,0,0~37,0,?,?
+P17,P17-01,Vdi1 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-02,Vdi2 terminal function selection,?,0,0~37,0,?,?
+P17,P17-03,Vdi2 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-04,Vdi3 terminal function selection,?,0,0~37,0,?,?
+P17,P17-05,Vdi3 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-06,Vdi4 terminal function selection,?,0,0~37,0,?,?
+P17,P17-07,Vdi4 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-08,Vdi5 terminal function selection,?,0,0~37,0,?,?
+P17,P17-09,Vdi5 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-10,Vdi6 terminal function selection,?,0,0~37,0,?,?
+P17,P17-11,Vdi6 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-12,Vdi7 terminal function selection,?,0,0~37,0,?,?
+P17,P17-13,Vdi7 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-14,Vdi8 terminal function selection,?,0,0~37,0,?,?
+P17,P17-15,Vdi8 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-16,Vdi9 terminal function selection,?,0,0~37,0,?,?
+P17,P17-17,Vdi9 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-18,Vdi10 terminal function selection,?,0,0~37,0,?,?
+P17,P17-19,Vdi10 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-20,Vdi11 terminal function selection,?,0,0~37,0,?,?
+P17,P17-21,Vdi11 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-22,Vdi12 terminal function selection,?,0,0~37,0,?,?
+P17,P17-23,Vdi12 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-24,Vdi13 terminal function selection,?,0,0~37,0,?,?
+P17,P17-25,Vdi13 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-26,Vdi14 terminal function selection,?,0,0~37,0,?,?
+P17,P17-27,Vdi14 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-28,Vdi15 terminal function selection,?,0,0~37,0,?,?
+P17,P17-29,Vdi15 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-30,Vdi16 terminal function selection,?,0,0~37,0,?,?
+P17,P17-31,Vdi16 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-33,Vdo1 terminal function selection,?,0,0~22,0,?,?
+P17,P17-34,Vdo1 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-35,Vdo2 terminal function selection,?,0,0~22,0,?,?
+P17,P17-36,Vdo2 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-37,Vdo3 terminal function selection,?,0,0~22,0,?,?
+P17,P17-38,Vdo3 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-39,Vdo4 terminal function selection,?,0,0~22,0,?,?
+P17,P17-40,Vdo4 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-41,Vdo5 terminal function selection,?,0,0~22,0,?,?
+P17,P17-42,Vdo5 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-43,Vdo6 terminal function selection,?,0,0~22,0,?,?
+P17,P17-44,Vdo6 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-45,Vdo7 terminal function selection,?,0,0~22,0,?,?
+P17,P17-46,Vdo7 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-47,Vdo8 terminal function selection,?,0,0~22,0,?,?
+P17,P17-48,Vdo8 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-49,Vdo9 terminal function selection,?,0,0~22,0,?,?
+P17,P17-50,Vdo9 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-51,Vdo10 terminal function selection,?,0,0~22,0,?,?
+P17,P17-52,Vdo10 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-53,Vdo11 terminal function selection,?,0,0~22,0,?,?
+P17,P17-54,Vdo11 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-55,Vdo12 terminal function selection,?,0,0~22,0,?,?
+P17,P17-56,Vdo12 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-57,Vdo13 terminal function selection,?,0,0~22,0,?,?
+P17,P17-58,Vdo13 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-59,Vdo14 terminal function selection,?,0,0~22,0,?,?
+P17,P17-60,Vdo14 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-61,Vdo15 terminal function selection,?,0,0~22,0,?,?
+P17,P17-62,Vdo15 terminal logic selection,?,0,0~1,0,?,?
+P17,P17-63,Vdo16 terminal function selection,?,0,0~22,0,?,?
+P17,P17-64,Vdo16 terminal logic selection,?,0,0~1,0,?,?
+EtherCAT,0x1C00,Sync Manager 0 Communication Type,SM0 type,?,-,-,Read only,0x1C00:00
+EtherCAT,0x1C10,Sync Manager 0 PDO Assignment,SM0 PDO,?,-,-,0,0x1C10:00
+EtherCAT,0x1C11,Sync Manager 1 PDO Assignment,SM1 PDO,?,-,-,0,0x1C11:00
+EtherCAT,0x1C12,Sync Manager 2 PDO Assignment (RxPDO),Number of assigned RxPDOs,?,-,0-4,1,0x1C12:00
+EtherCAT,0x1C12,RxPDO Assignment Entry 1,RxPDO 1,?,-,0x1600-0x1604,0x1600,0x1C12:01
+EtherCAT,0x1C12,RxPDO Assignment Entry 2,RxPDO 2,?,-,0x1600-0x1604,0,0x1C12:02
+EtherCAT,0x1C12,RxPDO Assignment Entry 3,RxPDO 3,?,-,0x1600-0x1604,0,0x1C12:03
+EtherCAT,0x1C12,RxPDO Assignment Entry 4,RxPDO 4,?,-,0x1600-0x1604,0,0x1C12:04
+EtherCAT,0x1C13,Sync Manager 3 PDO Assignment (TxPDO),Number of assigned TxPDOs,?,-,0-4,1,0x1C13:00
+EtherCAT,0x1C13,TxPDO Assignment Entry 1,TxPDO 1,?,-,0x1A00-0x1A04,0x1A00,0x1C13:01
+EtherCAT,0x1C13,TxPDO Assignment Entry 2,TxPDO 2,?,-,0x1A00-0x1A04,0,0x1C13:02
+EtherCAT,0x1C13,TxPDO Assignment Entry 3,TxPDO 3,?,-,0x1A00-0x1A04,0,0x1C13:03
+EtherCAT,0x1C13,TxPDO Assignment Entry 4,TxPDO 4,?,-,0x1A00-0x1A04,0,0x1C13:04
+EtherCAT,0x1C32,SM2 Synchronization,SM2 sync type,?,-,0-3,2,0x1C32:00
+EtherCAT,0x1C33,SM3 Synchronization,SM3 sync type,?,-,0-3,2,0x1C33:00
+PDO_Map,0x1600,RxPDO Mapping 1 (CSP Mode),Number of mapped entries,?,-,0-8,3,0x1600:00
+PDO_Map,0x1600,RxPDO Entry 1,Controlword,?,0x60400010,-,0x60400010,0x1600:01
+PDO_Map,0x1600,RxPDO Entry 2,Mode of operation,?,0x60600008,-,0x60600008,0x1600:02
+PDO_Map,0x1600,RxPDO Entry 3,Target position,?,0x607A0020,-,0x607A0020,0x1600:03
+PDO_Map,0x1601,RxPDO Mapping 2 (CSV Mode),Number of mapped entries,?,-,0-8,3,0x1601:00
+PDO_Map,0x1601,RxPDO Entry 1,Controlword,?,0x60400010,-,0x60400010,0x1601:01
+PDO_Map,0x1601,RxPDO Entry 2,Mode of operation,?,0x60600008,-,0x60600008,0x1601:02
+PDO_Map,0x1601,RxPDO Entry 3,Target velocity,?,0x60FF0020,-,0x60FF0020,0x1601:03
+PDO_Map,0x1602,RxPDO Mapping 3 (CST Mode),Number of mapped entries,?,-,0-8,3,0x1602:00
+PDO_Map,0x1602,RxPDO Entry 1,Controlword,?,0x60400010,-,0x60400010,0x1602:01
+PDO_Map,0x1602,RxPDO Entry 2,Mode of operation,?,0x60600008,-,0x60600008,0x1602:02
+PDO_Map,0x1602,RxPDO Entry 3,Target torque,?,0x60710010,-,0x60710010,0x1602:03
+PDO_Map,0x1A00,TxPDO Mapping 1 (CSP Mode),Number of mapped entries,?,-,0-8,4,0x1A00:00
+PDO_Map,0x1A00,TxPDO Entry 1,Statusword,?,0x60410010,-,0x60410010,0x1A00:01
+PDO_Map,0x1A00,TxPDO Entry 2,Mode of operation display,?,0x60610008,-,0x60610008,0x1A00:02
+PDO_Map,0x1A00,TxPDO Entry 3,Position actual value,?,0x60640020,-,0x60640020,0x1A00:03
+PDO_Map,0x1A00,TxPDO Entry 4,Velocity actual value,?,0x606C0020,-,0x606C0020,0x1A00:04
+PDO_Map,0x1A01,TxPDO Mapping 2 (CSV Mode),Number of mapped entries,?,-,0-8,3,0x1A01:00
+PDO_Map,0x1A01,TxPDO Entry 1,Statusword,?,0x60410010,-,0x60410010,0x1A01:01
+PDO_Map,0x1A01,TxPDO Entry 2,Mode of operation display,?,0x60610008,-,0x60610008,0x1A01:02
+PDO_Map,0x1A01,TxPDO Entry 3,Velocity actual value,?,0x606C0020,-,0x606C0020,0x1A01:03
+PDO_Map,0x1A02,TxPDO Mapping 3 (CST Mode),Number of mapped entries,?,-,0-8,4,0x1A02:00
+PDO_Map,0x1A02,TxPDO Entry 1,Statusword,?,0x60410010,-,0x60410010,0x1A02:01
+PDO_Map,0x1A02,TxPDO Entry 2,Mode of operation display,?,0x60610008,-,0x60610008,0x1A02:02
+PDO_Map,0x1A02,TxPDO Entry 3,Torque actual value,?,0x60770010,-,0x60770010,0x1A02:03
+PDO_Map,0x1A02,TxPDO Entry 4,Position actual value,?,0x60640020,-,0x60640020,0x1A02:04
+CIA402,0x603F,Error code,Error code (read-only),?,-,0-65535,0,0x603F:00
+CIA402,0x6040,Controlword,Control word (write),?,-,0-65535,0,0x6040:00
+CIA402,0x6041,Statusword,Status word (read),?,-,0-65535,0,0x6041:00
+CIA402,0x6060,Modes of operation,Control mode (write),?,-,-8 to 10,0,0x6060:00
+CIA402,0x6061,Modes of operation display,Mode display (read),?,-,-8 to 10,0,0x6061:00
+CIA402,0x6062,Position demand value,Position command internal,?,Command Unit,-2147483648-2147483647,0,0x6062:00
+CIA402,0x6064,Position actual value,Position feedback,?,Command Unit,-2147483648-2147483647,0,0x6064:00
+CIA402,0x6065,Following error window,Max position deviation,?,Command Unit,0-4294967295,100000,0x6065:00
+CIA402,0x6067,Position window,Position arrival threshold,?,Encoder unit,0-4294967295,100,0x6067:00
+CIA402,0x6068,Position window time,Position arrival time,?,ms,0-65535,0,0x6068:00
+CIA402,0x606C,Velocity actual value,Actual speed,?,Command Unit/s,-2147483648-2147483647,0,0x606C:00
+CIA402,0x6071,Target torque,Torque command,?,0.1% of rated,-32768-32767,0,0x6071:00
+CIA402,0x6072,Max torque,Maximum torque limit,?,0.1% of rated,0-65535,300,0x6072:00
+CIA402,0x6077,Torque actual value,Torque feedback,?,0.1% of rated,-32768-32767,0,0x6077:00
+CIA402,0x607A,Target position,Position command,?,Command Unit,-2147483648-2147483647,0,0x607A:00
+CIA402,0x607D,Min position limit,Software negative limit,?,Command Unit,-2147483648-2147483647,-2147483648,0x607D:01
+CIA402,0x607D,Max position limit,Software positive limit,?,Command Unit,-2147483648-2147483647,2147483647,0x607D:02
+CIA402,0x607F,Max profile velocity,Maximum speed,?,Command Unit/s,0-4294967295,300000,0x607F:00
+CIA402,0x6081,Profile velocity,Profile velocity,?,Command Unit/s,0-4294967295,0,0x6081:00
+CIA402,0x6083,Profile acceleration,Profile acceleration,?,Command Unit/s²,0-4294967295,0,0x6083:00
+CIA402,0x6084,Profile deceleration,Profile deceleration,?,Command Unit/s²,0-4294967295,0,0x6084:00
+CIA402,0x6091,Gear ratio - Motor revolutions,Motor resolution,?,pulse/rev,1-4294967295,131072,0x6091:01
+CIA402,0x6091,Gear ratio - Shaft revolutions,Axis resolution,?,units/rev,1-4294967295,1,0x6091:02
+CIA402,0x60B0,Position offset,Position offset,?,Command Unit,-2147483648-2147483647,0,0x60B0:00
+CIA402,0x60B1,Velocity offset,Speed offset,?,Command Unit/s,-2147483648-2147483647,0,0x60B1:00
+CIA402,0x60B2,Torque offset,Torque offset,?,0.1% of rated,-32768-32767,0,0x60B2:00
+CIA402,0x60B8,Touch probe function,Touch probe config,?,-,0-65535,0,0x60B8:00
+CIA402,0x60E0,Positive torque limit value,Forward torque limit,?,0.1% of rated,0-65535,300,0x60E0:00
+CIA402,0x60E1,Negative torque limit value,Reverse torque limit,?,0.1% of rated,0-65535,300,0x60E1:00
+CIA402,0x60F4,Following error actual value,Position deviation,?,Command Unit,-2147483648-2147483647,0,0x60F4:00
+CIA402,0x60FC,Position demand value,Position command internal,?,Encoder unit,-2147483648-2147483647,0,0x60FC:00
+CIA402,0x60FD,Digital inputs,Input IO status,?,-,0-4294967295,0,0x60FD:00
+CIA402,0x60FE,Digital outputs - Physical outputs,Digital outputs physical,?,-,0-4294967295,0,0x60FE:01
+CIA402,0x60FE,Digital outputs - Bit mask,Digital outputs mask,?,-,0-4294967295,0,0x60FE:02
+CIA402,0x60FF,Target velocity,Velocity command,?,Command Unit/s,-2147483648-2147483647,0,0x60FF:00
+CSP_Control,0x6063,Position actual internal value,Position feedback (encoder),?,Encoder unit,-2147483648-2147483647,0,0x6063:00
+CSP_Control,0x2007,Torque filter time constant,Torque filtering,?,ms,0.0-10.0,0.5,0x2007:06
+CSP_Control,0x2008,Speed regulator Kp,Speed loop Kp (alternative),?,Hz,1-2000,100,0x2008:01
+CSP_Control,0x2008,Speed regulator Ki,Speed loop Ki (alternative),?,Hz,1-10000,500,0x2008:02
+CSP_Control,0x2008,Position gain,Position control gain,?,1/s,1-2000,100,0x2008:03
+CSP_Control,0x2008,Speed filtering,Speed filter time constant,?,ms,0.0-10.0,1.0,0x2008:13
+CSP_Control,0x2008,Speed feedforward,Velocity feedforward gain,?,%,0-200,0,0x2008:14
+CSP_Control,0x2008,Torque feedforward filtering,Torque FF filter,?,ms,0.0-10.0,0.5,0x2008:15
+CSP_Control,0x2008,Torque feedforward gain,Torque FF gain,?,%,0-200,0,0x2008:16
