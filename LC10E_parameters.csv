@@ -278,3 +278,12 @@ CIA402,0x60FD,0x60FD:00,Digital inputs,Input IO status,-,0-4294967295,0,Digital 
 CIA402,0x60FE,0x60FE:01,Digital outputs - Physical outputs,Digital outputs physical,-,0-4294967295,0,Physical output states
 CIA402,0x60FE,0x60FE:02,Digital outputs - Bit mask,Digital outputs mask,-,0-4294967295,0,Bit mask for output control
 CIA402,0x60FF,0x60FF:00,Target velocity,Velocity command,Command Unit/s,-2147483648-2147483647,0,Target velocity (CSV mode) - RxPDO
+CSP_Control,0x6063,0x6063:00,Position actual internal value,Position feedback (encoder),Encoder unit,-2147483648-2147483647,0,Raw encoder position feedback - alternative to 0x6064
+CSP_Control,0x2007,0x2007:06,Torque filter time constant,Torque filtering,ms,0.0-10.0,0.5,First-order low-pass filter for torque feedback/command
+CSP_Control,0x2008,0x2008:01,Speed regulator Kp,Speed loop Kp (alternative),Hz,1-2000,100,Speed loop proportional gain (same as P2-04)
+CSP_Control,0x2008,0x2008:02,Speed regulator Ki,Speed loop Ki (alternative),Hz,1-10000,500,Speed loop integral gain (same as P2-05)
+CSP_Control,0x2008,0x2008:03,Position gain,Position control gain,1/s,1-2000,100,Position loop gain (CSP control diagram)
+CSP_Control,0x2008,0x2008:13,Speed filtering,Speed filter time constant,ms,0.0-10.0,1.0,First-order low-pass filter for speed calculation
+CSP_Control,0x2008,0x2008:14,Speed feedforward,Velocity feedforward gain,%,0-200,0,Feedforward gain for velocity compensation
+CSP_Control,0x2008,0x2008:15,Torque feedforward filtering,Torque FF filter,ms,0.0-10.0,0.5,Filter time constant for torque feedforward path
+CSP_Control,0x2008,0x2008:16,Torque feedforward gain,Torque FF gain,%,0-200,0,Feedforward gain for torque compensation

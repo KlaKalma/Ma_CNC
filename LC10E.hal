@@ -26,6 +26,9 @@ loadrt lcec
 # Load CIA402 driver for servo control (2 axes)
 loadrt cia402 count=2
 
+# Load scale components for RPM calculation and torque conversion
+loadrt scale count=2
+
 ########################################################################
 # SECTION 2: Add Functions to Servo Thread
 ########################################################################
@@ -37,6 +40,10 @@ addf lcec.read-all servo-thread
 # Process CIA402 state machine and feedback
 addf cia402.0.read-all servo-thread
 addf cia402.1.read-all servo-thread
+
+# Scale for RPM calculation
+addf scale.0 servo-thread
+addf scale.1 servo-thread
 
 # Motion control planning
 addf motion-command-handler servo-thread
