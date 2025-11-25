@@ -1,3 +1,15 @@
+# PyVCP Panel HAL connections for CSV Mode + PID
+# Note: Uses PID velocity command signals (x-vel-cmd, y-vel-cmd)
+
+# Load components for RPM calculation and velocity error
+loadrt scale names=scale.rpm-x,scale.rpm-y
+loadrt sum2 names=sum2.x-verr,sum2.y-verr
+
+addf scale.rpm-x servo-thread
+addf scale.rpm-y servo-thread
+addf sum2.x-verr servo-thread
+addf sum2.y-verr servo-thread
+
 # États EtherCAT Master
 net master-state-init lcec.0.state-init => pyvcp.master-state-init
 net master-state-preop lcec.0.state-preop => pyvcp.master-state-preop
@@ -5,13 +17,16 @@ net master-state-safeop lcec.0.state-safeop => pyvcp.master-state-safeop
 net master-state-op lcec.0.state-op => pyvcp.master-state-op
 
 # Connexions vers PyVCP - Axe X
-net x-pos-cmd-motion => pyvcp.x-pos-cmd
-net x-pos-fb-motion => pyvcp.x-pos-fb
+net x-pos-cmd => pyvcp.x-pos-cmd
+net x-pos-fb => pyvcp.x-pos-fb
 net x-f-error-display joint.0.f-error => pyvcp.x-f-error
-# x-pos-velocity signal created in LC10E.hal from joint.0.vel-cmd
-net x-pos-velocity => pyvcp.x-velocity sum2.0.in0
-net x-vel-fb cia402.0.velocity-fb => sum2.0.in1 pyvcp.x-velocity-fb
-net x-vel-error sum2.0.out => pyvcp.x-vel-error
+
+# Velocity command from PID (mm/s)
+# Error = cmd - fb, so negate feedback in sum2
+net x-vel-cmd => pyvcp.x-velocity sum2.x-verr.in0
+setp sum2.x-verr.gain1 -1.0
+net x-vel-fb cia402.0.velocity-fb => sum2.x-verr.in1 pyvcp.x-velocity-fb
+net x-vel-error sum2.x-verr.out => pyvcp.x-vel-error
 
 # Limit switches et home
 net x-limit-hard-min halui.joint.0.on-hard-min-limit => pyvcp.x-limit-min
@@ -29,23 +44,26 @@ net x-state-preop lcec.0.0.slave-state-preop => pyvcp.x-state-preop
 net x-state-safeop lcec.0.0.slave-state-safeop => pyvcp.x-state-safeop
 net x-state-op lcec.0.0.slave-state-op => pyvcp.x-state-op
 
-# Vitesse moteur en RPM (calculé depuis vitesse axe)
+# Vitesse moteur en RPM (calculé depuis velocity command PID)
 # RPM = (mm/s / 5mm_par_tour) * 60 = mm/s * 12
-net x-pos-velocity => scale.0.in
-setp scale.0.gain 12.0
-net x-motor-rpm scale.0.out => pyvcp.x-motor-rpm
+net x-vel-cmd => scale.rpm-x.in
+setp scale.rpm-x.gain 12.0
+net x-motor-rpm scale.rpm-x.out => pyvcp.x-motor-rpm
 
 # Reset fault depuis PyVCP
 net x-fault-reset-pyvcp pyvcp.x-fault-reset => cia402.0.fault-reset
 
 # Connexions vers PyVCP - Axe Y
-net y-pos-cmd-motion => pyvcp.y-pos-cmd
-net y-pos-fb-motion => pyvcp.y-pos-fb
+net y-pos-cmd => pyvcp.y-pos-cmd
+net y-pos-fb => pyvcp.y-pos-fb
 net y-f-error-display joint.1.f-error => pyvcp.y-f-error
-# y-pos-velocity signal created in LC10E.hal from joint.1.vel-cmd
-net y-pos-velocity => pyvcp.y-velocity sum2.1.in0
-net y-vel-fb cia402.1.velocity-fb => sum2.1.in1 pyvcp.y-velocity-fb
-net y-vel-error sum2.1.out => pyvcp.y-vel-error
+
+# Velocity command from PID (mm/s) - Axe Y
+# Error = cmd - fb, so negate feedback in sum2
+net y-vel-cmd => pyvcp.y-velocity sum2.y-verr.in0
+setp sum2.y-verr.gain1 -1.0
+net y-vel-fb cia402.1.velocity-fb => sum2.y-verr.in1 pyvcp.y-velocity-fb
+net y-vel-error sum2.y-verr.out => pyvcp.y-vel-error
 
 # Limit switches et home - Axe Y
 net y-limit-hard-min halui.joint.1.on-hard-min-limit => pyvcp.y-limit-min
@@ -63,11 +81,11 @@ net y-state-preop lcec.0.1.slave-state-preop => pyvcp.y-state-preop
 net y-state-safeop lcec.0.1.slave-state-safeop => pyvcp.y-state-safeop
 net y-state-op lcec.0.1.slave-state-op => pyvcp.y-state-op
 
-# Vitesse moteur - Axe Y en RPM (calculé depuis vitesse axe)
+# Vitesse moteur - Axe Y en RPM (calculé depuis velocity command PID)
 # RPM = (mm/s / 5mm_par_tour) * 60 = mm/s * 12
-net y-pos-velocity => scale.1.in
-setp scale.1.gain 12.0
-net y-motor-rpm scale.1.out => pyvcp.y-motor-rpm
+net y-vel-cmd => scale.rpm-y.in
+setp scale.rpm-y.gain 12.0
+net y-motor-rpm scale.rpm-y.out => pyvcp.y-motor-rpm
 
 # Reset fault depuis PyVCP - Axe Y
 net y-fault-reset-pyvcp pyvcp.y-fault-reset => cia402.1.fault-reset

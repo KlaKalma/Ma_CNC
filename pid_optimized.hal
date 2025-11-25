@@ -1,0 +1,18 @@
+# PID Auto-Tuned Parameters
+# Date: 2025-11-26 04:40:11
+# Final RMS Error: 24.1 µm
+
+# Apply manually with: halcmd source pid_optimized.hal
+
+setp pid.x.Pgain 102.0
+setp pid.x.Igain 50.0
+setp pid.x.Dgain 0.00050
+setp pid.x.FF1 0.950
+setp pid.x.FF2 0.00030
+
+setp pid.y.Pgain 102.0
+setp pid.y.Igain 50.0
+setp pid.y.Dgain 0.00050
+setp pid.y.FF1 0.950
+setp pid.y.FF2 0.00030
+

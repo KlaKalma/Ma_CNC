@@ -1,0 +1,287 @@
+########################################################################
+# HAL Configuration for LinuxCNC with EtherCAT LC10E Servo Drive
+# 
+# Hardware:
+#   - 1x LC10E Servo Drive (CIA402) on EtherCAT
+#   - Configured for single axis (X) test
+#
+# Author: Configuration based on Marco Reps best practices
+# Date: 2025-11-09
+########################################################################
+
+########################################################################
+# SECTION 1: Load Real-time Components
+########################################################################
+
+# Load kinematics (trivial for simple cartesian machine)
+loadrt [KINS]KINEMATICS
+
+# Load motion controller
+loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[KINS]JOINTS
+
+# Load EtherCAT master and configure with XML file
+loadusr -W lcec_conf ethercat-conf.xml
+loadrt lcec
+
+# Load CIA402 driver for servo control (2 axes)
+loadrt cia402 count=2
+
+# Load scale components:
+# scale.0, scale.1 = RPM calculation (used by pyvcp_panel.hal)
+# scale.2, scale.3 = velocity feedforward (mm/s -> counts/s)
+# scale.4, scale.5 = integrator gain for offset compensation
+loadrt scale count=6
+
+# Load float-to-s32 converters for velocity offset (scale output is float, PDO needs s32)
+loadrt conv_float_s32 count=2
+
+# Load summing components:
+# sum2.0, sum2.1 = velocity error (used by pyvcp_panel.hal)
+# sum2.2, sum2.3 = position error for offset compensation
+# sum2.4, sum2.5 = position command correction
+loadrt sum2 count=6
+
+# Load integrators for offset compensation (LC10E bug workaround)
+loadrt integ count=2
+
+########################################################################
+# SECTION 2: Add Functions to Servo Thread
+########################################################################
+# Order is CRITICAL: read hardware → process → write hardware
+
+# Read EtherCAT PDOs from hardware
+addf lcec.read-all servo-thread
+
+# Process CIA402 state machine and feedback
+addf cia402.0.read-all servo-thread
+addf cia402.1.read-all servo-thread
+
+# Scale for RPM calculation
+addf scale.0 servo-thread
+addf scale.1 servo-thread
+
+# Scale for velocity feedforward (mm/s -> counts/s)
+addf scale.2 servo-thread
+addf scale.3 servo-thread
+
+# Float to s32 conversion for velocity offset PDO
+addf conv-float-s32.0 servo-thread
+addf conv-float-s32.1 servo-thread
+
+# Velocity error sums (for pyvcp display)
+addf sum2.0 servo-thread
+addf sum2.1 servo-thread
+
+# Position error sums for offset compensation
+addf sum2.2 servo-thread
+addf sum2.3 servo-thread
+
+# Position correction sums
+addf sum2.4 servo-thread
+addf sum2.5 servo-thread
+
+# Integrators for offset compensation
+addf integ.0 servo-thread
+addf integ.1 servo-thread
+
+# Scale for integrator gain
+addf scale.4 servo-thread
+addf scale.5 servo-thread
+
+# Motion control planning
+addf motion-command-handler servo-thread
+addf motion-controller servo-thread
+
+# Prepare CIA402 commands
+addf cia402.0.write-all servo-thread
+addf cia402.1.write-all servo-thread
+
+# Write EtherCAT PDOs to hardware
+addf lcec.write-all servo-thread
+
+########################################################################
+# SECTION 3: EtherCAT to CIA402 Connections
+########################################################################
+#                                                                                           n names match the working example from forum
+
+# === Control Word (Master -> Slave) ===
+net x-controlword cia402.0.controlword => lcec.0.0.cia-controlword
+
+# === Status Word (Slave -> Master) ===
+net x-statusword lcec.0.0.cia-statusword => cia402.0.statusword
+
+# === Position Control ===
+net x-drv-target-pos cia402.0.drv-target-position => lcec.0.0.target-position
+net x-drv-act-pos lcec.0.0.actual-position => cia402.0.drv-actual-position
+
+# === Velocity Feedback ===
+net x-drv-act-vel lcec.0.0.actual-velocity => cia402.0.drv-actual-velocity
+
+# === Velocity Feedforward (LinuxCNC vel-cmd -> 0x60B1) ===
+# joint.0.vel-cmd is in mm/s, drive expects counts/s
+# scale.2 converts: mm/s * 26214.4 = counts/s (float)
+# conv-float-s32.0 converts float to s32 for PDO
+# Create signal here, pyvcp_panel.hal adds readers
+net x-pos-velocity joint.0.vel-cmd => scale.2.in
+setp scale.2.gain 26214.4
+net x-vel-offset-float scale.2.out => conv-float-s32.0.in
+net x-vel-offset conv-float-s32.0.out => lcec.0.0.velocity-offset
+
+# === Operation Mode ===
+net x-opmode cia402.0.opmode => lcec.0.0.opmode
+net x-opmode-display lcec.0.0.opmode-display => cia402.0.opmode-display
+
+########################################################################
+# SECTION 4: CIA402 to Motion Control Connections
+########################################################################
+
+# === Enable Chain ===
+net x-enable joint.0.amp-enable-out => cia402.0.enable
+
+# === Position Command with Offset Compensation (LC10E bug workaround) ===
+# Calculate position error: error = pos_fb - pos_cmd
+# sum2.2: in0 = pos_fb, in1 = -pos_cmd => out = error
+net x-pos-fb-motion cia402.0.pos-fb => joint.0.motor-pos-fb sum2.2.in0
+net x-pos-cmd-motion joint.0.motor-pos-cmd => sum2.2.in1
+setp sum2.2.gain0 1.0
+setp sum2.2.gain1 -1.0
+
+# Integrate error to get correction term
+net x-pos-error sum2.2.out => integ.0.in
+setp integ.0.gain 5.0
+setp integ.0.max 1.0
+setp integ.0.min -1.0
+
+# Apply correction: corrected_cmd = pos_cmd + (integrated_error * gain)
+# scale.4 applies integrator gain (negative because error = fb - cmd)
+net x-integ-out integ.0.out => scale.4.in
+setp scale.4.gain -1.0
+# sum2.4: corrected_pos = pos_cmd + correction
+net x-pos-correction scale.4.out => sum2.4.in1
+net x-pos-cmd-motion => sum2.4.in0
+setp sum2.4.gain0 1.0
+setp sum2.4.gain1 1.0
+net x-pos-cmd-corrected sum2.4.out => cia402.0.pos-cmd
+
+# === Fault Handling ===
+net x-fault cia402.0.drv-fault => joint.0.amp-fault-in
+
+# === Homing ===
+net x-home joint.0.home-sw-in <= cia402.0.stat-homed
+net x-home-index joint.0.index-enable <=> cia402.0.home
+
+########################################################################
+# SECTION 5: CIA402 Parameters
+########################################################################
+
+# Scale: encoder counts per machine unit
+# 17-bit absolute encoder = 131072 counts/rev
+# Ballscrew pitch = 5mm/rev, direct drive (1:1)
+# pos-scale = 131072 / 5 = 26214.4
+setp cia402.0.pos-scale 26214.4
+
+# Velocity scale  
+setp cia402.0.velo-scale 26214.4
+
+# Enable Cyclic Synchronous Position mode (CIA402 mode 8)
+setp cia402.0.csp-mode 1
+
+# Auto fault reset on enable
+setp cia402.0.auto-fault-reset 1
+
+########################################################################
+# SECTION 6: System Configuration
+########################################################################
+
+# Enable the I/O controller (required for LinuxCNC to run)
+setp iocontrol.0.emc-enable-in 1
+
+# Set default joint limits if not in INI (safety)
+# These should match your INI file values
+# setp joint.0.ferror 10.0
+# setp joint.0.min-ferror 1.0
+
+########################################################################
+# SECTION 7: Debug Pins (optional - comment out in production)
+########################################################################
+
+# Uncomment to monitor key signals in HAL meter:
+# loadusr halmeter sig x-statusword
+# loadusr halmeter sig x-pos-fb
+# loadusr halmeter pin cia402.0.stat-op-enabled
+
+########################################################################
+# End of HAL configuration - Axe X
+########################################################################
+
+########################################################################
+# AXIS Y - Joint 1 - LC10E Position 1
+########################################################################
+
+# === EtherCAT to CIA402 Connections ===
+net y-controlword cia402.1.controlword => lcec.0.1.cia-controlword
+net y-statusword lcec.0.1.cia-statusword => cia402.1.statusword
+
+# === Position Control ===
+net y-drv-target-pos cia402.1.drv-target-position => lcec.0.1.target-position
+net y-drv-act-pos lcec.0.1.actual-position => cia402.1.drv-actual-position
+
+# === Velocity Feedback ===
+net y-drv-act-vel lcec.0.1.actual-velocity => cia402.1.drv-actual-velocity
+
+# === Velocity Feedforward (LinuxCNC vel-cmd -> 0x60B1) ===
+# joint.1.vel-cmd is in mm/s, drive expects counts/s (negative for Y)
+# scale.3 converts: mm/s * -26214.4 = counts/s (float)
+# conv-float-s32.1 converts float to s32 for PDO
+# Create signal here, pyvcp_panel.hal adds readers
+net y-pos-velocity joint.1.vel-cmd => scale.3.in
+setp scale.3.gain -26214.4
+net y-vel-offset-float scale.3.out => conv-float-s32.1.in
+net y-vel-offset conv-float-s32.1.out => lcec.0.1.velocity-offset
+
+# === Operation Mode ===
+net y-opmode cia402.1.opmode => lcec.0.1.opmode
+net y-opmode-display lcec.0.1.opmode-display => cia402.1.opmode-display
+
+# === CIA402 to Motion Control ===
+net y-enable joint.1.amp-enable-out => cia402.1.enable
+
+# === Position Command with Offset Compensation (LC10E bug workaround) ===
+# Calculate position error: error = pos_fb - pos_cmd
+net y-pos-fb-motion cia402.1.pos-fb => joint.1.motor-pos-fb sum2.3.in0
+net y-pos-cmd-motion joint.1.motor-pos-cmd => sum2.3.in1
+setp sum2.3.gain0 1.0
+setp sum2.3.gain1 -1.0
+
+# Integrate error to get correction term
+net y-pos-error sum2.3.out => integ.1.in
+setp integ.1.gain 5.0
+setp integ.1.max 1.0
+setp integ.1.min -1.0
+
+# Apply correction: corrected_cmd = pos_cmd + (integrated_error * gain)
+# scale.5 applies integrator gain (negative because error = fb - cmd)
+net y-integ-out integ.1.out => scale.5.in
+setp scale.5.gain -1.0
+# sum2.5: corrected_pos = pos_cmd + correction
+net y-pos-correction scale.5.out => sum2.5.in1
+net y-pos-cmd-motion => sum2.5.in0
+setp sum2.5.gain0 1.0
+setp sum2.5.gain1 1.0
+net y-pos-cmd-corrected sum2.5.out => cia402.1.pos-cmd
+
+net y-fault cia402.1.drv-fault => joint.1.amp-fault-in
+
+# === Homing ===
+net y-home joint.1.home-sw-in <= cia402.1.stat-homed
+net y-home-index joint.1.index-enable <=> cia402.1.home
+
+# === CIA402 Parameters for Y ===
+setp cia402.1.pos-scale -26214.4
+setp cia402.1.velo-scale -26214.4
+setp cia402.1.csp-mode 1
+setp cia402.1.auto-fault-reset 1
+
+########################################################################
+# End of HAL configuration
+########################################################################

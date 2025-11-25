@@ -117,7 +117,7 @@ def generate_progressive_sine_test(output_file="/home/cnc/linuxcnc/nc_files/func
     num_segments = 100  # Plus de segments pour mouvement plus fluide
     
     # Vitesses de crête (mm/min) utilisées pendant la portion centrale à vitesse constante
-    base_speeds = [500, 800, 1000, 1200, 1500]
+    base_speeds = [2000, 3000, 4000, 5000]  # 33.3 à 100 mm/s
     
     # En-tête du fichier G-code
     gcode = ["%"]
