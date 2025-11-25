@@ -8,7 +8,10 @@ net master-state-op lcec.0.state-op => pyvcp.master-state-op
 net x-pos-cmd-motion => pyvcp.x-pos-cmd
 net x-pos-fb-motion => pyvcp.x-pos-fb
 net x-f-error-display joint.0.f-error => pyvcp.x-f-error
-net x-pos-velocity joint.0.vel-cmd => pyvcp.x-velocity
+# x-pos-velocity signal created in LC10E.hal from joint.0.vel-cmd
+net x-pos-velocity => pyvcp.x-velocity sum2.0.in0
+net x-vel-fb cia402.0.velocity-fb => sum2.0.in1 pyvcp.x-velocity-fb
+net x-vel-error sum2.0.out => pyvcp.x-vel-error
 
 # Limit switches et home
 net x-limit-hard-min halui.joint.0.on-hard-min-limit => pyvcp.x-limit-min
@@ -39,7 +42,10 @@ net x-fault-reset-pyvcp pyvcp.x-fault-reset => cia402.0.fault-reset
 net y-pos-cmd-motion => pyvcp.y-pos-cmd
 net y-pos-fb-motion => pyvcp.y-pos-fb
 net y-f-error-display joint.1.f-error => pyvcp.y-f-error
-net y-pos-velocity joint.1.vel-cmd => pyvcp.y-velocity
+# y-pos-velocity signal created in LC10E.hal from joint.1.vel-cmd
+net y-pos-velocity => pyvcp.y-velocity sum2.1.in0
+net y-vel-fb cia402.1.velocity-fb => sum2.1.in1 pyvcp.y-velocity-fb
+net y-vel-error sum2.1.out => pyvcp.y-vel-error
 
 # Limit switches et home - Axe Y
 net y-limit-hard-min halui.joint.1.on-hard-min-limit => pyvcp.y-limit-min

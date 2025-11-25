@@ -27,7 +27,13 @@ loadrt lcec
 loadrt cia402 count=2
 
 # Load scale components for RPM calculation and torque conversion
-loadrt scale count=2
+loadrt scale count=4
+
+# Load float-to-s32 converters for velocity offset (scale output is float, PDO needs s32)
+loadrt conv_float_s32 count=2
+
+# Load summing components for velocity error calculation
+loadrt sum2 count=2
 
 ########################################################################
 # SECTION 2: Add Functions to Servo Thread
@@ -44,6 +50,18 @@ addf cia402.1.read-all servo-thread
 # Scale for RPM calculation
 addf scale.0 servo-thread
 addf scale.1 servo-thread
+
+# Scale for velocity feedforward (mm/s -> counts/s)
+addf scale.2 servo-thread
+addf scale.3 servo-thread
+
+# Float to s32 conversion for velocity offset PDO
+addf conv-float-s32.0 servo-thread
+addf conv-float-s32.1 servo-thread
+
+# Velocity error sums
+addf sum2.0 servo-thread
+addf sum2.1 servo-thread
 
 # Motion control planning
 addf motion-command-handler servo-thread
@@ -70,6 +88,19 @@ net x-statusword lcec.0.0.cia-statusword => cia402.0.statusword
 # === Position Control ===
 net x-drv-target-pos cia402.0.drv-target-position => lcec.0.0.target-position
 net x-drv-act-pos lcec.0.0.actual-position => cia402.0.drv-actual-position
+
+# === Velocity Feedback ===
+net x-drv-act-vel lcec.0.0.actual-velocity => cia402.0.drv-actual-velocity
+
+# === Velocity Feedforward (LinuxCNC vel-cmd -> 0x60B1) ===
+# joint.0.vel-cmd is in mm/s, drive expects counts/s
+# scale.2 converts: mm/s * 26214.4 = counts/s (float)
+# conv-float-s32.0 converts float to s32 for PDO
+# Create signal here, pyvcp_panel.hal adds readers
+net x-pos-velocity joint.0.vel-cmd => scale.2.in
+setp scale.2.gain 26214.4
+net x-vel-offset-float scale.2.out => conv-float-s32.0.in
+net x-vel-offset conv-float-s32.0.out => lcec.0.0.velocity-offset
 
 # === Operation Mode ===
 net x-opmode cia402.0.opmode => lcec.0.0.opmode
@@ -114,6 +145,10 @@ setp cia402.0.csp-mode 1
 # Auto fault reset on enable
 setp cia402.0.auto-fault-reset 1
 
+# Velocity error sum gains (cmd - feedback)
+setp sum2.0.gain0 1
+setp sum2.0.gain1 -1
+
 ########################################################################
 # SECTION 6: System Configuration
 ########################################################################
@@ -151,6 +186,19 @@ net y-statusword lcec.0.1.cia-statusword => cia402.1.statusword
 net y-drv-target-pos cia402.1.drv-target-position => lcec.0.1.target-position
 net y-drv-act-pos lcec.0.1.actual-position => cia402.1.drv-actual-position
 
+# === Velocity Feedback ===
+net y-drv-act-vel lcec.0.1.actual-velocity => cia402.1.drv-actual-velocity
+
+# === Velocity Feedforward (LinuxCNC vel-cmd -> 0x60B1) ===
+# joint.1.vel-cmd is in mm/s, drive expects counts/s (negative for Y)
+# scale.3 converts: mm/s * -26214.4 = counts/s (float)
+# conv-float-s32.1 converts float to s32 for PDO
+# Create signal here, pyvcp_panel.hal adds readers
+net y-pos-velocity joint.1.vel-cmd => scale.3.in
+setp scale.3.gain -26214.4
+net y-vel-offset-float scale.3.out => conv-float-s32.1.in
+net y-vel-offset conv-float-s32.1.out => lcec.0.1.velocity-offset
+
 # === Operation Mode ===
 net y-opmode cia402.1.opmode => lcec.0.1.opmode
 net y-opmode-display lcec.0.1.opmode-display => cia402.1.opmode-display
@@ -170,6 +218,9 @@ setp cia402.1.pos-scale -26214.4
 setp cia402.1.velo-scale -26214.4
 setp cia402.1.csp-mode 1
 setp cia402.1.auto-fault-reset 1
+
+setp sum2.1.gain0 1
+setp sum2.1.gain1 -1
 
 ########################################################################
 # End of HAL configuration

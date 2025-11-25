@@ -55,9 +55,16 @@
             <label><text>" mm"</text></label>
         </hbox>
         <hbox>
-            <label><text>"Vitesse:"</text></label>
+            <label><text>"Vit Cmd:"</text></label>
             <number><halpin>"x-velocity"</halpin><font>("Helvetica",12)</font><width>8</width><format>"+4.1f"</format></number>
-            <label><text>" mm/s  "</text></label>
+            <label><text>" mm/s  Vit FB:"</text></label>
+            <number><halpin>"x-velocity-fb"</halpin><font>("Helvetica",12)</font><width>8</width><format>"+4.1f"</format></number>
+            <label><text>" mm/s"</text></label>
+        </hbox>
+        <hbox>
+            <label><text>"Err. Vit:"</text></label>
+            <number><halpin>"x-vel-error"</halpin><font>("Helvetica",12,"bold")</font><width>8</width><format>"+4.2f"</format></number>
+            <label><text>" mm/s  RPM:"</text></label>
             <number><halpin>"x-motor-rpm"</halpin><font>("Helvetica",12)</font><width>6</width><format>"+5.0f"</format></number>
             <label><text>" rpm"</text></label>
         </hbox>
@@ -127,9 +134,16 @@
             <label><text>" mm"</text></label>
         </hbox>
         <hbox>
-            <label><text>"Vitesse:"</text></label>
+            <label><text>"Vit Cmd:"</text></label>
             <number><halpin>"y-velocity"</halpin><font>("Helvetica",12)</font><width>8</width><format>"+4.1f"</format></number>
-            <label><text>" mm/s  "</text></label>
+            <label><text>" mm/s  Vit FB:"</text></label>
+            <number><halpin>"y-velocity-fb"</halpin><font>("Helvetica",12)</font><width>8</width><format>"+4.1f"</format></number>
+            <label><text>" mm/s"</text></label>
+        </hbox>
+        <hbox>
+            <label><text>"Err. Vit:"</text></label>
+            <number><halpin>"y-vel-error"</halpin><font>("Helvetica",12,"bold")</font><width>8</width><format>"+4.2f"</format></number>
+            <label><text>" mm/s  RPM:"</text></label>
             <number><halpin>"y-motor-rpm"</halpin><font>("Helvetica",12)</font><width>6</width><format>"+5.0f"</format></number>
             <label><text>" rpm"</text></label>
         </hbox>

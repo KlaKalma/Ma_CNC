@@ -15,6 +15,8 @@
           <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="opmode" halType="s32"/>
           <!-- Target Position -->
           <pdoEntry idx="607A" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <!-- Velocity Offset (0x60B1) for feedforward from LinuxCNC -->
+          <pdoEntry idx="60B1" subIdx="00" bitLen="32" halPin="velocity-offset" halType="s32"/>
         </pdo>
       </syncManager>
       
@@ -46,6 +48,8 @@
           <pdoEntry idx="6060" subIdx="00" bitLen="8" halPin="opmode" halType="s32"/>
           <!-- Target Position -->
           <pdoEntry idx="607A" subIdx="00" bitLen="32" halPin="target-position" halType="s32"/>
+          <!-- Velocity Offset (0x60B1) for feedforward from LinuxCNC -->
+          <pdoEntry idx="60B1" subIdx="00" bitLen="32" halPin="velocity-offset" halType="s32"/>
         </pdo>
       </syncManager>
       
