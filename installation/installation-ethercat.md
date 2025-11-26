@@ -439,13 +439,113 @@ Cette méthode efface la mémoire volatile du drive, incluant les PDO assignment
 
 ---
 
-## 11. Notes de version
+## 11. Problème aléatoire de PDO au démarrage
+
+### 11.1 Symptôme
+
+De manière **aléatoire**, un ou plusieurs drives restent en **PREOP** avec erreur lors du démarrage de LinuxCNC :
+
+```bash
+sudo /usr/local/etherlab/bin/ethercat slaves
+# 0  0:0  OP     E  LC10E_V1.04
+# 1  0:1  PREOP  E  LC10E_V1.04   ← Bloqué en PREOP
+```
+
+Les logs montrent :
+```
+EtherCAT WARNING 0-1: Failed to assign PDO 0x1600 at position 1 of SM2
+EtherCAT ERROR 0-1: AL status message 0x001D: "Invalid output configuration"
+```
+
+### 11.2 Cause
+
+Les drives LC10E **sauvegardent parfois les PDOs en mémoire persistante**. Lors du redémarrage, cette configuration entre en conflit avec celle définie dans `ethercat-conf.xml`.
+
+Le SDO standard `0x1010` (Save Parameters) n'est pas supporté par les LC10E, donc on ne peut pas désactiver cette sauvegarde.
+
+### 11.3 Solution : Reset PDOs automatique au démarrage
+
+Ajouter le reset des PDOs dans le script `start-ethercat.sh` **après** la détection des esclaves :
+
+```bash
+# Reset persistent PDOs on all slaves to avoid configuration conflicts
+echo ""
+echo "=== Reset PDOs persistants ==="
+for slave in 0 1; do
+    sudo /usr/local/etherlab/bin/ethercat state -p$slave PREOP 2>/dev/null
+done
+sleep 0.5
+for slave in 0 1; do
+    sudo /usr/local/etherlab/bin/ethercat download -p$slave -t uint8 0x1c12 0 0 2>/dev/null
+    sudo /usr/local/etherlab/bin/ethercat download -p$slave -t uint8 0x1c13 0 0 2>/dev/null
+done
+echo "PDOs reset - prêt pour LinuxCNC"
+```
+
+### 11.4 Explication des SDOs 0x1C12 et 0x1C13
+
+Ces deux SDOs font partie du standard **CIA301** (CANopen over EtherCAT) et définissent quels PDOs sont actifs :
+
+| SDO | Nom | Direction | Rôle |
+|-----|-----|-----------|------|
+| **0x1C12** | RxPDO Assignment | Master → Slave | Liste des PDOs de **commande** (ce qu'on envoie au drive) |
+| **0x1C13** | TxPDO Assignment | Slave → Master | Liste des PDOs de **feedback** (ce qu'on reçoit du drive) |
+
+#### Structure de ces SDOs
+
+```
+0x1C12:00 = Nombre de PDOs assignés (uint8)
+0x1C12:01 = Index du 1er PDO (ex: 0x1600)
+0x1C12:02 = Index du 2ème PDO (ex: 0x1601)
+...
+
+0x1C13:00 = Nombre de PDOs assignés (uint8)
+0x1C13:01 = Index du 1er PDO (ex: 0x1A00)
+0x1C13:02 = Index du 2ème PDO (ex: 0x1A01)
+...
+```
+
+#### Ce que fait le reset
+
+```bash
+ethercat download -p0 -t uint8 0x1c12 0 0
+#                              │     │ │
+#                              │     │ └─ Valeur = 0 (aucun PDO)
+#                              │     └─── Subindex 0 (nombre de PDOs)
+#                              └───────── SDO RxPDO Assignment
+```
+
+En mettant le subindex 0 à **zéro**, on dit au drive : "oublie tous les PDOs configurés". 
+Ensuite, quand LinuxCNC démarre, `lcec` reconfigure les PDOs selon `ethercat-conf.xml`.
+
+#### Mnémotechnique
+
+- **0x1C12** = "1C **R**eceive" → RxPDO (drive **reçoit** les commandes)
+- **0x1C13** = "1C **T**ransmit" → TxPDO (drive **transmet** le feedback)
+
+**Notes** :
+- Adapter la boucle `for slave in 0 1` au nombre de drives (ex: `0 1 2` pour 3 drives)
+- Le reset prend environ **0.5 seconde** - impact négligeable
+- Les erreurs sont ignorées (`2>/dev/null`) car certains drives peuvent déjà être en bon état
+
+### 11.4 Pourquoi c'est acceptable
+
+Bien que ce soit un **workaround** et non une solution élégante :
+- C'est **rapide** (~0.5s)
+- C'est **fiable** - garantit un démarrage propre à chaque fois
+- C'est **nécessaire** - les LC10E n'ont pas d'option pour désactiver la sauvegarde PDO
+- C'est **non-destructif** - lcec reconfigurera les PDOs correctement au lancement
+
+---
+
+## 12. Notes de version
 
 | Date | Action | Notes |
 |------|--------|-------|
 | 2025-11-09 | Installation initiale | EtherCAT Master + LCEC + CIA402 sur Raspberry Pi |
 | 2025-11-09 | Création du patch | Chemins EtherLab pour compilation LCEC |
 | 2025-11-24 | Ajout section nouveau drive | Procédure pour réinitialiser PDOs d'un nouveau servo |
+| 2025-11-27 | Ajout reset PDO automatique | Workaround pour problème aléatoire de configuration PDO |
 
 ---
 
