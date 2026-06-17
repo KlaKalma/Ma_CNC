@@ -1,0 +1,264 @@
+# CSV Control Mode Diagram - LC10E Servo Drive
+# Cyclic Synchronous Velocity Mode (opmode 9)
+# Based on official Lichuan LC-E Series documentation
+#
+# In CSV mode:
+#   - MASTER (LinuxCNC) sends target velocity every cycle
+#   - DRIVE handles: Speed loop → Torque loop
+#   - LinuxCNC PID handles position loop externally
+
+system_name: "CSV Control Mode"
+opmode: 9
+
+## Input Signals (from Master via EtherCAT)
+
+inputs:
+  servo_on: "System activation signal"
+  target_speed_60FFh: "Target velocity command (Command Unit/s)"
+  speed_offset_60B1h: "Speed offset/feedforward (Command Unit/s)"
+  torque_offset_60B2h: "Torque offset (0.1%)"
+
+## Control Blocks (Inside Drive)
+
+blocks:
+
+  maximum_speed_limit:
+    id: "607Fh"
+    inputs: ["target_speed_60FFh", "speed_offset_60B1h"]
+    output: "limited_speed"
+    description: "Applies maximum speed limitation"
+
+  speed_regulator:
+    id: "2008-01h, 2008-02h"
+    inputs: ["limited_speed", "speed_feedback_606Ch"]
+    output: "torque_command"
+    description: "Speed PI controller"
+    parameters:
+      - "2008-01h: Speed loop proportional gain"
+      - "2008-02h: Speed loop integral time"
+
+  torque_feedforward:
+    id: "2008-16h"
+    filter: "2008-15h"
+    inputs: ["speed_offset_60B1h"]
+    output: "feedforward_torque"
+    description: "Torque feedforward with gain and filtering"
+
+  torque_filtering:
+    id: "2007-06h"
+    function: "Torque limitation"
+    inputs: ["torque_command", "feedforward_torque", "torque_offset_60B2h"]
+    output: "filtered_torque"
+    description: "Torque filtering, limitation and summing"
+
+  motor:
+    inputs: ["filtered_torque"]
+    outputs: ["motion", "torque_feedback_6077h"]
+    description: "Motor actuator with current control"
+
+  encoder:
+    inputs: ["motion"]
+    outputs: ["speed_feedback_606Ch", "position_feedback_6064h"]
+    description: "17-bit absolute encoder (131072 counts/rev)"
+
+## Feedback Loops
+
+feedback_loops:
+
+  speed_loop:
+    source: "encoder"
+    signal: "606Ch (Actual speed)"
+    destination: "speed_regulator"
+    type: "negative feedback"
+    
+  torque_loop:
+    source: "motor"
+    signal: "6077h (Actual torque)"
+    destination: "torque_filtering"
+    type: "negative feedback"
+
+## Signal Flow (from diagram)
+
+signal_flow:
+  1:
+    from: "Servo ON"
+    to: "Speed offset 60B1h + Target speed 60FFh"
+    
+  2:
+    from: "Target speed"
+    to: "Maximum speed limit 607Fh"
+    
+  3:
+    from: "Maximum speed limit"
+    to: "Speed regulator (summing junction)"
+    operation: "+"
+    
+  4:
+    from: "Speed feedback 606Ch"
+    to: "Speed regulator (summing junction)"
+    operation: "-"
+    
+  5:
+    from: "Speed regulator 2008-01h/02h"
+    to: "Torque summing junction"
+    operation: "+"
+    
+  6:
+    from: "Torque feedforward 2008-16h (filtered by 2008-15h)"
+    to: "Torque summing junction"
+    operation: "+"
+    
+  7:
+    from: "Torque offset 60B2h"
+    to: "Torque summing junction"
+    operation: "+"
+    
+  8:
+    from: "Torque summing"
+    to: "Torque filtering 2007-06h"
+    
+  9:
+    from: "Torque filtering"
+    to: "Motor"
+    
+  10:
+    from: "Motor"
+    to: "Encoder"
+    
+  11:
+    from: "Encoder"
+    to: "Speed feedback 606Ch"
+    type: "feedback"
+    
+  12:
+    from: "Motor"
+    to: "Torque feedback 6077h"
+    type: "feedback"
+
+## PDO Objects Used
+
+pdo_objects:
+
+  inputs_RxPDO:
+    - index: "6040h"
+      name: "Control word"
+      type: "UINT16"
+      access: "RW"
+      
+    - index: "6060h"
+      name: "Control model (opmode)"
+      type: "INT8"
+      access: "RW"
+      
+    - index: "60FFh"
+      name: "Target speed"
+      type: "INT32"
+      access: "RW"
+      unit: "Command Unit/s"
+      
+    - index: "607Fh"
+      name: "Maximum speed"
+      type: "UDINT32"
+      access: "RW"
+      unit: "Command Unit/s"
+      
+    - index: "60B1h"
+      name: "Speed offset"
+      type: "INT32"
+      access: "RW"
+      unit: "Command Unit/s"
+      
+    - index: "60B2h"
+      name: "Torque offset"
+      type: "INT32"
+      access: "RW"
+      unit: "0.1%"
+
+  outputs_TxPDO:
+    - index: "603Fh"
+      name: "Error code"
+      type: "UINT16"
+      access: "RO"
+      
+    - index: "6041h"
+      name: "Status word"
+      type: "UINT16"
+      access: "RO"
+      
+    - index: "6061h"
+      name: "Mode display"
+      type: "INT8"
+      access: "RO"
+      
+    - index: "6064h"
+      name: "Position feedback"
+      type: "INT32"
+      access: "RO"
+      unit: "Command Unit"
+      
+    - index: "606Ch"
+      name: "Actual speed"
+      type: "INT32"
+      access: "RO"
+      unit: "Command Unit/s"
+      
+    - index: "6077h"
+      name: "Actual torque"
+      type: "INT16"
+      access: "RO"
+      unit: "0.1%"
+
+## Drive Parameters (SDO)
+
+drive_parameters:
+
+  speed_loop:
+    - index: "2008-01h"
+      name: "Speed loop proportional gain"
+      
+    - index: "2008-02h"
+      name: "Speed loop integral time"
+
+  torque_feedforward:
+    - index: "2008-15h"
+      name: "Torque feedforward filtering"
+      
+    - index: "2008-16h"
+      name: "Torque feedforward gain"
+
+  torque_control:
+    - index: "2007-06h"
+      name: "Torque filtering"
+      
+    - index: "6072h"
+      name: "Maximum torque"
+      unit: "0.1%"
+      
+    - index: "60E0h"
+      name: "Forward torque limit"
+      unit: "0.1%"
+      
+    - index: "60E1h"
+      name: "Reverse torque limit"
+      unit: "0.1%"
+
+## Our LinuxCNC Integration
+
+linuxcnc_integration:
+
+  position_loop: "Handled by LinuxCNC PID component"
+  
+  signal_chain:
+    1: "motion-controller → motor-pos-cmd"
+    2: "pid.x calculates error (pos-cmd - pos-fb)"
+    3: "pid.x outputs velocity-cmd (mm/s)"
+    4: "cia402 scales to target-velocity (counts/s)"
+    5: "EtherCAT sends 60FFh to drive"
+    6: "Drive speed loop follows velocity"
+    7: "Encoder feedback returns via 6064h, 606Ch"
+    
+  why_csv_mode:
+    - "Full control over position loop tuning (P, I, D, FF1, FF2)"
+    - "No LC10E firmware position offset bug"
+    - "Better following error (~2µm vs 612µm in CSP)"
+    - "Easier tuning with LinuxCNC HAL tools"

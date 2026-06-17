@@ -15,17 +15,3 @@ setp pid.x.FF2       0.00040
 setp pid.x.deadband  0.0
 setp pid.x.maxoutput 500.0
 setp pid.x.maxerror  10.0
-
-# ============================================
-# Axis Y PID Parameters
-# ============================================
-setp pid.y.Pgain     57.5
-setp pid.y.Igain     51.6
-setp pid.y.Dgain     0.00135
-setp pid.y.FF0       0.0
-setp pid.y.FF1       0.998
-setp pid.y.FF2       0.00040
-setp pid.y.deadband  0.0
-setp pid.y.maxoutput 500.0
-setp pid.y.maxerror  10.0
-

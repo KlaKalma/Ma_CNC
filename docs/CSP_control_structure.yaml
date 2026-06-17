@@ -1,4 +1,8 @@
 # CSP Control Mode Diagram - Structured Representation
+# LC10E Servo Drive - Cyclic Synchronous Position Mode (opmode 8)
+#
+# In CSP mode, the MASTER (LinuxCNC) sends target position every cycle.
+# The DRIVE handles: Position loop → Speed loop → Torque loop
 
 system_name: "CSP Control Mode"
 
@@ -161,6 +165,13 @@ parameters:
 
 architecture: "Cascaded control loops"
 loops:
-  outer_loop: "Position control"
-  middle_loop: "Speed control"
-  inner_loop: "Torque control"
+  outer_loop: "Position control (in drive)"
+  middle_loop: "Speed control (in drive)"
+  inner_loop: "Torque/current control (in drive)"
+
+## Why we don't use CSP with LC10E
+
+note: |
+  The LC10E has a firmware bug where the internal position loop 
+  adds an offset over time, causing following error drift.
+  We use CSV mode instead, where LinuxCNC handles the position loop.

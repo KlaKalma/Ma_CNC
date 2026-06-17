@@ -1,20 +1,21 @@
-# PyVCP Panel HAL connections for CSV Mode + PID
-# Note: Uses PID velocity command signals (x-vel-cmd, y-vel-cmd)
+# PyVCP Panel HAL connections for CSV Mode + PID (X-axis only)
+# Note: Uses PID velocity command signals (x-vel-cmd)
 
 # Load components for RPM calculation and velocity error
-loadrt scale names=scale.rpm-x,scale.rpm-y
-loadrt sum2 names=sum2.x-verr,sum2.y-verr
+loadrt scale names=scale.rpm-x
+loadrt sum2 names=sum2.x-verr
 
 addf scale.rpm-x servo-thread
-addf scale.rpm-y servo-thread
 addf sum2.x-verr servo-thread
-addf sum2.y-verr servo-thread
 
 # États EtherCAT Master
 net master-state-init lcec.0.state-init => pyvcp.master-state-init
 net master-state-preop lcec.0.state-preop => pyvcp.master-state-preop
 net master-state-safeop lcec.0.state-safeop => pyvcp.master-state-safeop
 net master-state-op lcec.0.state-op => pyvcp.master-state-op
+
+# EL2024 #1 — état des 4 canaux (tous liés à x-enable)
+net x-enable => pyvcp.el2024-ch1 pyvcp.el2024-ch2 pyvcp.el2024-ch3 pyvcp.el2024-ch4
 
 # Connexions vers PyVCP - Axe X
 net x-pos-cmd => pyvcp.x-pos-cmd
@@ -52,41 +53,3 @@ net x-motor-rpm scale.rpm-x.out => pyvcp.x-motor-rpm
 
 # Reset fault depuis PyVCP
 net x-fault-reset-pyvcp pyvcp.x-fault-reset => cia402.0.fault-reset
-
-# Connexions vers PyVCP - Axe Y
-net y-pos-cmd => pyvcp.y-pos-cmd
-net y-pos-fb => pyvcp.y-pos-fb
-net y-f-error-display joint.1.f-error => pyvcp.y-f-error
-
-# Velocity command from PID (mm/s) - Axe Y
-# Error = cmd - fb, so negate feedback in sum2
-net y-vel-cmd => pyvcp.y-velocity sum2.y-verr.in0
-setp sum2.y-verr.gain1 -1.0
-net y-vel-fb cia402.1.velocity-fb => sum2.y-verr.in1 pyvcp.y-velocity-fb
-net y-vel-error sum2.y-verr.out => pyvcp.y-vel-error
-
-# Limit switches et home - Axe Y
-net y-limit-hard-min halui.joint.1.on-hard-min-limit => pyvcp.y-limit-min
-net y-limit-hard-max halui.joint.1.on-hard-max-limit => pyvcp.y-limit-max
-net y-is-homed joint.1.homed => pyvcp.y-homed
-
-# États du servo - Axe Y
-net y-enable => pyvcp.y-enabled
-net y-fault => pyvcp.y-fault
-net y-warning-status cia402.1.stat-warning => pyvcp.y-warning
-
-# États EtherCAT du drive Y (slave 1)
-net y-state-init lcec.0.1.slave-state-init => pyvcp.y-state-init
-net y-state-preop lcec.0.1.slave-state-preop => pyvcp.y-state-preop
-net y-state-safeop lcec.0.1.slave-state-safeop => pyvcp.y-state-safeop
-net y-state-op lcec.0.1.slave-state-op => pyvcp.y-state-op
-
-# Vitesse moteur - Axe Y en RPM (calculé depuis velocity command PID)
-# RPM = (mm/s / 5mm_par_tour) * 60 = mm/s * 12
-net y-vel-cmd => scale.rpm-y.in
-setp scale.rpm-y.gain 12.0
-net y-motor-rpm scale.rpm-y.out => pyvcp.y-motor-rpm
-
-# Reset fault depuis PyVCP - Axe Y
-net y-fault-reset-pyvcp pyvcp.y-fault-reset => cia402.1.fault-reset
-

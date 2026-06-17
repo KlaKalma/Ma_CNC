@@ -1,0 +1,28 @@
+# HAL debugging file - source this for extra monitoring
+
+# Create display components for debugging
+loadrt or2 names=debug-brake-check
+
+# Add to servo thread
+addf debug-brake-check servo-thread
+
+# Connect signals for visual debugging
+# This creates intermediate signals you can monitor
+
+# Verify NOT gate works
+net x-enable-copy => debug-brake-check.in0
+net brake-release-copy debug-brake-check.out => pyvcp.debug-brake-state
+
+# Create debug message outputs (if messageboard component available)
+net x-enable-debug motion.amp-enable-out
+net brake-release-debug brake-release
+net output1-debug lcec.0.2.output-1
+net output2-debug lcec.0.2.output-2
+
+puts "Debug monitors loaded. Use these commands to monitor:"
+puts "  halcmd getp joint.0.amp-enable-out"
+puts "  halcmd getp brake-release"
+puts "  halcmd getp lcec.0.2.output-1"
+puts "  halcmd getp not.0.out"
+puts ""
+puts "Or run: ./debug-brake.sh"
