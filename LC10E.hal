@@ -1,142 +1,112 @@
 ########################################################################
-# HAL Configuration for LinuxCNC with LC10E in CSV Mode + PID
-# 
-# Mode: CSV (Cyclic Synchronous Velocity) - opmode 9 / Single Axis X
-# Control: LinuxCNC PID does position loop, drive does velocity loop
-# IO: EL2024 digital outputs controlled by enable signal
-#
-# Advantages:
-#   - Full control over position loop (P, I, D, FF1, FF2)
-#   - Direct HAL control of EL2024 outputs (4 channels ON/OFF)
-#   - Simplified single-axis config for testing
-#
-# Author: Based on Sandro's approach + EL2024 integration
-# Date: 2025-11-26
+# HAL — 3 axes XYZ (LC10E CSV Mode + PID)
+# Mode CSV (opmode 9) : boucle position LinuxCNC, boucle vitesse drive
+# EL2024 #1 (pos.1) : Ch1=FrX  Ch2=FrY  Ch3=FrZ  Ch4=Spare
 ########################################################################
 
-########################################################################
-# SECTION 1: Load Real-time Components
-########################################################################
-
-# Load kinematics
+# --- Composants ---
 loadrt [KINS]KINEMATICS
-
-# Load motion controller
 loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[KINS]JOINTS
-
-# Load EtherCAT master
 loadusr -W lcec_conf ethercat-conf.xml
 loadrt lcec
+loadrt cia402 count=3
+loadrt pid names=pid.x,pid.y,pid.z
 
-# Load CIA402 driver (1 axis only: X)
-loadrt cia402 count=1
-
-# Load PID controller (X axis only)
-loadrt pid names=pid.x
-
-########################################################################
-# SECTION 2: Add Functions to Servo Thread
-########################################################################
-# Order: read → motion → PID → cia402 → write
-
-# Read EtherCAT PDOs
-addf lcec.read-all servo-thread
-
-# Process CIA402 state machine (read feedback)
-addf cia402.0.read-all servo-thread
-
-# Motion control (generates position commands)
+# --- Thread servo : read → motion → PID → cia402 → write ---
+addf lcec.read-all          servo-thread
+addf cia402.0.read-all      servo-thread
+addf cia402.1.read-all      servo-thread
+addf cia402.2.read-all      servo-thread
 addf motion-command-handler servo-thread
-addf motion-controller servo-thread
+addf motion-controller      servo-thread
+addf pid.x.do-pid-calcs     servo-thread
+addf pid.y.do-pid-calcs     servo-thread
+addf pid.z.do-pid-calcs     servo-thread
+addf cia402.0.write-all     servo-thread
+addf cia402.1.write-all     servo-thread
+addf cia402.2.write-all     servo-thread
+addf lcec.write-all         servo-thread
 
-# PID controller (position error → velocity command)
-addf pid.x.do-pid-calcs servo-thread
+# --- EtherCAT ↔ CIA402 ── Axe X (slave 0 / joint 0) ---
+net x-controlword    cia402.0.controlword          => lcec.0.10.cia-controlword
+net x-statusword     lcec.0.10.cia-statusword       => cia402.0.statusword
+net x-drv-act-pos    lcec.0.10.actual-position      => cia402.0.drv-actual-position
+net x-drv-act-vel    lcec.0.10.actual-velocity      => cia402.0.drv-actual-velocity
+net x-opmode         cia402.0.opmode               => lcec.0.10.opmode
+net x-opmode-display lcec.0.10.opmode-display       => cia402.0.opmode-display
+net x-target-vel     cia402.0.drv-target-velocity  => lcec.0.10.target-velocity
+net x-drv-target-pos cia402.0.drv-target-position  => lcec.0.10.target-position
 
-# CIA402 commands (velocity-cmd → drv-target-velocity)
-addf cia402.0.write-all servo-thread
+# --- EtherCAT ↔ CIA402 ── Axe Y (slave 1 / joint 1) ---
+net y-controlword    cia402.1.controlword          => lcec.0.11.cia-controlword
+net y-statusword     lcec.0.11.cia-statusword       => cia402.1.statusword
+net y-drv-act-pos    lcec.0.11.actual-position      => cia402.1.drv-actual-position
+net y-drv-act-vel    lcec.0.11.actual-velocity      => cia402.1.drv-actual-velocity
+net y-opmode         cia402.1.opmode               => lcec.0.11.opmode
+net y-opmode-display lcec.0.11.opmode-display       => cia402.1.opmode-display
+net y-target-vel     cia402.1.drv-target-velocity  => lcec.0.11.target-velocity
+net y-drv-target-pos cia402.1.drv-target-position  => lcec.0.11.target-position
 
-# Write EtherCAT PDOs
-addf lcec.write-all servo-thread
+# --- EtherCAT ↔ CIA402 ── Axe Z (slave 2 / joint 2) ---
+net z-controlword    cia402.2.controlword          => lcec.0.12.cia-controlword
+net z-statusword     lcec.0.12.cia-statusword       => cia402.2.statusword
+net z-drv-act-pos    lcec.0.12.actual-position      => cia402.2.drv-actual-position
+net z-drv-act-vel    lcec.0.12.actual-velocity      => cia402.2.drv-actual-velocity
+net z-opmode         cia402.2.opmode               => lcec.0.12.opmode
+net z-opmode-display lcec.0.12.opmode-display       => cia402.2.opmode-display
+net z-target-vel     cia402.2.drv-target-velocity  => lcec.0.12.target-velocity
+net z-drv-target-pos cia402.2.drv-target-position  => lcec.0.12.target-position
 
-########################################################################
-# SECTION 3: EtherCAT to CIA402 Connections (X Axis Only)
-########################################################################
-
-# === Axis X (Joint 0, Slave 0) ===
-
-# Control/Status words
-net x-controlword cia402.0.controlword => lcec.0.0.cia-controlword
-net x-statusword lcec.0.0.cia-statusword => cia402.0.statusword
-
-# Position feedback (for PID and motion)
-net x-drv-act-pos lcec.0.0.actual-position => cia402.0.drv-actual-position
-
-# Velocity feedback (for monitoring)
-net x-drv-act-vel lcec.0.0.actual-velocity => cia402.0.drv-actual-velocity
-
-# Operation mode (CSV = 9)
-net x-opmode cia402.0.opmode => lcec.0.0.opmode
-net x-opmode-display lcec.0.0.opmode-display => cia402.0.opmode-display
-
-# Target velocity: cia402 converts internally via velo-scale
-net x-target-vel cia402.0.drv-target-velocity => lcec.0.0.target-velocity
-
-# Keep target-position connected (for smooth CSV/CSP switching if needed)
-net x-drv-target-pos cia402.0.drv-target-position => lcec.0.0.target-position
-
-########################################################################
-# SECTION 4: PID Configuration - Axis X
-########################################################################
-
-# PID enable (from amp-enable)
-# Enable signal: to drive, PID, and EL2024 brake outputs
-net x-enable joint.0.amp-enable-out => pid.x.enable cia402.0.enable lcec.0.2.output-1 lcec.0.2.output-2 lcec.0.2.output-3 lcec.0.2.output-4
-
-# Position command from motion planner
-net x-pos-cmd joint.0.motor-pos-cmd => pid.x.command
-
-# Position feedback from drive (scaled by cia402)
-net x-pos-fb cia402.0.pos-fb => pid.x.feedback joint.0.motor-pos-fb
-
-# PID output = velocity command (mm/s)
-# Goes to cia402 which converts via velo-scale to drv-target-velocity
-net x-vel-cmd pid.x.output => cia402.0.velocity-cmd
-
-# Fault handling
-net x-fault cia402.0.drv-fault => joint.0.amp-fault-in
-
-# Homing
-net x-home joint.0.home-sw-in <= cia402.0.stat-homed
+# --- PID + Enable ── Axe X ---
+net x-enable  joint.0.amp-enable-out => pid.x.enable cia402.0.enable
+net x-pos-cmd joint.0.motor-pos-cmd  => pid.x.command
+net x-pos-fb  cia402.0.pos-fb        => pid.x.feedback joint.0.motor-pos-fb
+net x-vel-cmd pid.x.output           => cia402.0.velocity-cmd
+net x-fault   cia402.0.drv-fault     => joint.0.amp-fault-in
+net x-home    joint.0.home-sw-in     <= cia402.0.stat-homed
 net x-home-index joint.0.index-enable <=> cia402.0.home
 
-########################################################################
-# SECTION 5: CIA402 Parameters (X Axis Only)
-########################################################################
+# --- PID + Enable ── Axe Y ---
+net y-enable  joint.1.amp-enable-out => pid.y.enable cia402.1.enable
+net y-pos-cmd joint.1.motor-pos-cmd  => pid.y.command
+net y-pos-fb  cia402.1.pos-fb        => pid.y.feedback joint.1.motor-pos-fb
+net y-vel-cmd pid.y.output           => cia402.1.velocity-cmd
+net y-fault   cia402.1.drv-fault     => joint.1.amp-fault-in
+net y-home    joint.1.home-sw-in     <= cia402.1.stat-homed
+net y-home-index joint.1.index-enable <=> cia402.1.home
 
-# Scale: 131072 counts/rev / 5mm pitch = 26214.4 counts/mm
+# --- PID + Enable ── Axe Z ---
+net z-enable  joint.2.amp-enable-out => pid.z.enable cia402.2.enable
+net z-pos-cmd joint.2.motor-pos-cmd  => pid.z.command
+net z-pos-fb  cia402.2.pos-fb        => pid.z.feedback joint.2.motor-pos-fb
+net z-vel-cmd pid.z.output           => cia402.2.velocity-cmd
+net z-fault   cia402.2.drv-fault     => joint.2.amp-fault-in
+net z-home    joint.2.home-sw-in     <= cia402.2.stat-homed
+net z-home-index joint.2.index-enable <=> cia402.2.home
+
+# --- EL2024 #1 — Freins (pos.1) — relachement sur machine-on ---
+# dout-0=FrX  dout-1=FrY  dout-2=FrZ  dout-3=spare
+# pin names 0-indexés (type natif EL2024)
+net machine-on halui.machine.is-on => lcec.0.1.dout-0 lcec.0.1.dout-1 lcec.0.1.dout-2
+
+# --- Paramètres CIA402 — CSV (opmode 9), même config pour les 3 axes ---
 setp cia402.0.pos-scale 26214.4
 setp cia402.0.velo-scale 26214.4
-
-# CSV mode (opmode 9) - NOT CSP!
 setp cia402.0.csp-mode 0
-
-# Auto fault reset
 setp cia402.0.auto-fault-reset 1
 
-########################################################################
-# SECTION 7: System Configuration
-########################################################################
+setp cia402.1.pos-scale 26214.4
+setp cia402.1.velo-scale 26214.4
+setp cia402.1.csp-mode 0
+setp cia402.1.auto-fault-reset 1
 
+setp cia402.2.pos-scale 26214.4
+setp cia402.2.velo-scale 26214.4
+setp cia402.2.csp-mode 0
+setp cia402.2.auto-fault-reset 1
+
+# --- Système ---
 setp iocontrol.0.emc-enable-in 1
 
-########################################################################
-# SECTION 8: Load PID Tuning Parameters from external file
-########################################################################
-# PID parameters are stored separately for easy auto-tuning
-# Run scripts/pid_autotune_full.py to optimize these values
-
+# --- Gains PID (fichier séparé pour auto-tuning) ---
 source pid_tuning.hal
-
-########################################################################
-# End of X-only + EL2024 configuration
-########################################################################

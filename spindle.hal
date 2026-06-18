@@ -1,0 +1,49 @@
+########################################################################
+# spindle.hal — Contrôle broche VFD via EtherCAT (types natifs)
+#
+# Topologie vérifiée le 2026-06-17 :
+#   EL2008 #1 : slave 4  → lcec.0.4.dout-N   (0-indexé, commandes XN)
+#   EL4002    : slave 6  → lcec.0.6.aout-N-*  (float, scale en RPM)
+#   EL1008 #1 : slave 7  → lcec.0.7.din-N    (0-indexé, retours YN)
+########################################################################
+
+# scale.rpm-x/y/z : calcul RPM moteur (pyvcp_panel.hal les utilise)
+loadrt scale names=scale.rpm-x,scale.rpm-y,scale.rpm-z,scale.avi-voltage
+
+addf scale.rpm-x       servo-thread
+addf scale.rpm-y       servo-thread
+addf scale.rpm-z       servo-thread
+addf scale.avi-voltage servo-thread
+
+# Tension AVI réelle : EL4002 aout-0-curr-dc (0-1) × 10 = 0-10V
+setp scale.avi-voltage.gain 10.0
+net avi-curr-dc lcec.0.6.aout-0-curr-dc => scale.avi-voltage.in
+
+# --- Commandes numériques → VFD (EL2008 #1, slave 4) ---
+# dout-N = VFD borne X(N+1) — 0-indexé : dout-0=X1, dout-1=X2, ..., dout-6=X7
+net spindle-fwd    spindle.0.forward => lcec.0.4.dout-0   # X1 Forward
+net spindle-rev    spindle.0.reverse => lcec.0.4.dout-1   # X2 Reverse
+# dout-2 (X3 Stop)   : bouton PyVCP → connecté dans pyvcp_panel.hal
+# dout-3 (X4 Jog FWD): non connecté
+# dout-4 (X5 Jog REV): non connecté
+# dout-5 (X6 Reset)  : bouton PyVCP → connecté dans pyvcp_panel.hal
+net spindle-enable spindle.0.on => lcec.0.4.dout-6        # X7 Enable
+# dout-7 (X8 Ext Fault): non connecté
+
+# --- Référence analogique → VFD AVI (EL4002, slave 6) ---
+# EL4002 natif : aout-N-value (float), scale RPM → tension 0-10V
+# tmpdc = value / scale → raw = 32767 * tmpdc
+# Avec scale=6000 : value=6000 RPM → tmpdc=1.0 → raw=32767 → 10V
+# Adapter scale selon RPM max du VFD
+setp lcec.0.6.aout-0-scale 18000.0    # CH1 : 18000 RPM = 10V = 1200 Hz max VFD (8 poles, 15 RPM/Hz)
+setp lcec.0.6.aout-0-enable 1         # CH1 toujours actif (0V quand vitesse=0)
+net spindle-speed-abs spindle.0.speed-out-abs => lcec.0.6.aout-0-value
+
+setp lcec.0.6.aout-1-scale 1.0        # CH2 : référence 100% fixe
+setp lcec.0.6.aout-1-enable 1
+setp lcec.0.6.aout-1-value 1.0        # CH2 = 1.0 → 10V (référence max)
+
+# --- Retours VFD → LinuxCNC (EL1008 #1, slave 7) ---
+# din-N = VFD borne Y(N+1) — 0-indexé : din-0=Y1, din-1=Y2
+net vfd-fault  lcec.0.7.din-0              # Y1 Fault  → affiché via pyvcp
+net vfd-run    lcec.0.7.din-1 => spindle.0.at-speed  # Y2 Run → at-speed LinuxCNC

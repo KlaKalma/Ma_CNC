@@ -5,69 +5,54 @@
 ```
 [PC EtherCAT Master]
         │
-        ├─► [Pos 0]  LC10E Servo Drive          Axe X, CIA402, encodeur 17-bit
+        ├─► [Pos 0]  LC10E Servo Drive X        CIA402, encodeur 17-bit
+        ├─► [Pos 1]  LC10E Servo Drive Y        CIA402, encodeur 17-bit
+        ├─► [Pos 2]  LC10E Servo Drive Z        CIA402, encodeur 17-bit
         │
-        └─► [Pos 1]  EK1100 Bus Coupler ════════ début du bloc E-bus ═══════
+        └─► [Pos 3]  EK1100 Bus Coupler ════════ début du bloc E-bus ═══════
                          │
-                         ├─ [Pos  2]  EL2024 #1  — 4×DO 24V 2A   — Freins axes
-                         ├─ [Pos  3]  EL2024 #2  — 4×DO 24V 2A   — Freins axes
-                         ├─ [Pos  4]  EL2024 #3  — 4×DO 24V 2A   — Vannes / relais
-                         ├─ [Pos  5]  EL2008 #1  — 8×DO 24V 0.5A — Commandes VFD
-                         ├─ [Pos  6]  EL2008 #2  — 8×DO 24V 0.5A — Sorties diverses
-                         ├─ [Pos  7]  EL4002      — 2×AO ±10V     — Vitesse broche
-                         ├─ [Pos  8]  EL1008 #1  — 8×DI 24V       — Sécurités
-                         ├─ [Pos  9]  EL1008 #2  — 8×DI 24V       — Palpeur / outil
-                         └─ [Pos 10]  EL1008 #3  — 8×DI 24V       — Retours VFD
+                         ├─ [Pos  4]  EL2024 #1  — 4×DO 24V 2A   — Freins X/Y/Z + spare
+                         ├─ [Pos  5]  EL2024 #2  — 4×DO 24V 2A   — À définir
+                         ├─ [Pos  6]  EL2024 #3  — 4×DO 24V 2A   — Vannes / relais
+                         ├─ [Pos  7]  EL2008 #1  — 8×DO 24V 0.5A — Commandes VFD
+                         ├─ [Pos  8]  EL2008 #2  — 8×DO 24V 0.5A — Sorties diverses
+                         ├─ [Pos  9]  EL4002      — 2×AO ±10V     — Vitesse broche
+                         ├─ [Pos 10]  EL1008 #1  — 8×DI 24V       — Sécurités
+                         ├─ [Pos 11]  EL1008 #2  — 8×DI 24V       — Palpeur / outil
+                         └─ [Pos 12]  EL1008 #3  — 8×DI 24V       — Retours VFD
 ```
 
 ---
 
-## EL2024 #1 — Position 2 — `lcec.0.2.*`
+## EL2024 #1 — Position 4 — `lcec.0.4.*`
 
 **Module** : Beckhoff EL2024 — 4 sorties digitales 24VDC, **2A** par canal  
-**Usage** : Freins et enable axe X  
+**Usage** : Freins axes X, Y, Z — tous sur ce module  
 **État** : Configuré dans `ethercat-conf.xml`
 
 | Canal | Borne + | Borne - | PDO Index | HAL Pin | Net HAL | Fonction | État |
 |-------|---------|---------|-----------|---------|---------|----------|------|
-| 1 | 1 | 5 | 0x7000:01 | `lcec.0.2.output-1` | `x-enable` | Frein axe X (bobine A) | Câblé |
-| 2 | 2 | 6 | 0x7010:01 | `lcec.0.2.output-2` | `x-enable` | Frein axe X (bobine B) | Câblé |
-| 3 | 3 | 7 | 0x7020:01 | `lcec.0.2.output-3` | `x-enable` | Enable variateur X | Câblé |
-| 4 | 4 | 8 | 0x7030:01 | `lcec.0.2.output-4` | `x-enable` | Réservé axe X | À définir |
+| 1 | 1 | 5 | 0x7000:01 | `lcec.0.4.output-1` | `x-enable` | Frein / Enable axe X | Câblé |
+| 2 | 2 | 6 | 0x7010:01 | `lcec.0.4.output-2` | `y-enable` | Frein / Enable axe Y | Câblé |
+| 3 | 3 | 7 | 0x7020:01 | `lcec.0.4.output-3` | `z-enable` | Frein / Enable axe Z | Câblé |
+| 4 | 4 | 8 | 0x7030:01 | `lcec.0.4.output-4` | *(spare)*  | Réservé | À définir |
 
-> **Logique** : HIGH (24V) = frein desserré / variateur activé · LOW = frein serré / arrêt  
-> Les canaux 1-4 sont tous connectés au même signal `x-enable` (= `joint.0.amp-enable-out`)
+> **Logique** : HIGH (24V) = frein desserré / variateur activé · LOW = frein serré / arrêt
 
 ---
 
-## EL2024 #2 — Position 3 — `lcec.0.3.*`
+## EL2024 #2 — Position 5 — `lcec.0.5.*`
 
 **Module** : Beckhoff EL2024 — 4 sorties digitales 24VDC, **2A** par canal  
-**Usage prévu** : Freins axes Y et Z  
-**État** : À ajouter dans `ethercat-conf.xml`
+**Usage prévu** : À définir (ex: enables auxiliaires, vannes haute puissance)  
+**État** : À configurer
 
-| Canal | Borne + | Borne - | PDO Index | HAL Pin | Net HAL prévu | Fonction prévue | État |
-|-------|---------|---------|-----------|---------|--------------|-----------------|------|
-| 1 | 1 | 5 | 0x7000:01 | `lcec.0.3.output-1` | `y-enable` | Frein axe Y (A) | À câbler |
-| 2 | 2 | 6 | 0x7010:01 | `lcec.0.3.output-2` | `y-enable` | Frein axe Y (B) | À câbler |
-| 3 | 3 | 7 | 0x7020:01 | `lcec.0.3.output-3` | `z-enable` | Frein axe Z (A) | À câbler |
-| 4 | 4 | 8 | 0x7030:01 | `lcec.0.3.output-4` | `z-enable` | Frein axe Z (B) | À câbler |
-
-<details>
-<summary>XML à ajouter dans ethercat-conf.xml</summary>
-
-```xml
-<slave idx="3" type="generic" vid="00000002" pid="07E83052" configPdos="true">
-  <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
-  <syncManager idx="2" dir="out">
-    <pdo idx="1600"><pdoEntry idx="7000" subIdx="01" bitLen="1" halPin="output-1" halType="bit"/></pdo>
-    <pdo idx="1601"><pdoEntry idx="7010" subIdx="01" bitLen="1" halPin="output-2" halType="bit"/></pdo>
-    <pdo idx="1602"><pdoEntry idx="7020" subIdx="01" bitLen="1" halPin="output-3" halType="bit"/></pdo>
-    <pdo idx="1603"><pdoEntry idx="7030" subIdx="01" bitLen="1" halPin="output-4" halType="bit"/></pdo>
-  </syncManager>
-</slave>
-```
-</details>
+| Canal | Borne + | Borne - | PDO Index | HAL Pin | Fonction prévue | État |
+|-------|---------|---------|-----------|---------|-----------------|------|
+| 1 | 1 | 5 | 0x7000:01 | `lcec.0.5.output-1` | À définir | — |
+| 2 | 2 | 6 | 0x7010:01 | `lcec.0.5.output-2` | À définir | — |
+| 3 | 3 | 7 | 0x7020:01 | `lcec.0.5.output-3` | À définir | — |
+| 4 | 4 | 8 | 0x7030:01 | `lcec.0.5.output-4` | À définir | — |
 
 ---
 

@@ -1,165 +1,167 @@
 <pyvcp>
 
-    <!-- ================================================================ -->
-    <!-- ETHERCAT MASTER                                                   -->
-    <!-- ================================================================ -->
+    <!-- ============================================================ -->
+    <!-- ETHERCAT MASTER                                               -->
+    <!-- ============================================================ -->
     <labelframe text="EtherCAT — Master">
         <hbox>
-            <led><halpin>"master-state-init"</halpin><on_color>"orange"</on_color><off_color>"grey"</off_color><size>14</size></led>
-            <label><text>"Init"</text></label>
-            <label><text>"  "</text></label>
-            <led><halpin>"master-state-preop"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>14</size></led>
-            <label><text>"PreOP"</text></label>
-            <label><text>"  "</text></label>
-            <led><halpin>"master-state-safeop"</halpin><on_color>"cyan"</on_color><off_color>"grey"</off_color><size>14</size></led>
-            <label><text>"SafeOP"</text></label>
-            <label><text>"  "</text></label>
-            <led><halpin>"master-state-op"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>14</size></led>
+            <led><halpin>"master-state-init"</halpin><on_color>"orange"</on_color><off_color>"grey"</off_color><size>13</size></led>
+            <label><text>"Init  "</text></label>
+            <led><halpin>"master-state-preop"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>13</size></led>
+            <label><text>"PreOP  "</text></label>
+            <led><halpin>"master-state-safeop"</halpin><on_color>"cyan"</on_color><off_color>"grey"</off_color><size>13</size></led>
+            <label><text>"SafeOP  "</text></label>
+            <led><halpin>"master-state-op"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>13</size></led>
             <label><text>"OP"</text></label>
         </hbox>
     </labelframe>
 
-    <!-- ================================================================ -->
-    <!-- EL2024 #1 — POS.2 — FREINS & ENABLE AXE X                       -->
-    <!-- Tous les canaux commandés par joint.0.amp-enable-out (x-enable)  -->
-    <!-- HIGH=actif (frein desserré / drive enable) · LOW=frein serré     -->
-    <!-- ================================================================ -->
-    <labelframe text="EL2024 #1 — Freins / Enable X  (pos.2)">
+    <!-- ============================================================ -->
+    <!-- SORTIES — 7 indicateurs                                       -->
+    <!--   EL2024 #1 (pos.1) : Ch1=FrX  Ch2=FrY  Ch3=FrZ  Ch4=Spare -->
+    <!--   + Enable drives X/Y/Z                                       -->
+    <!-- ============================================================ -->
+    <labelframe text="Sorties — EL2024 #1 (pos.1)">
         <hbox>
             <vbox>
                 <hbox>
-                    <label><text>"Ch1 — Frein X (A) : "</text></label>
-                    <led><halpin>"el2024-ch1"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>18</size></led>
+                    <led><halpin>"el2024-ch1"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>16</size></led>
+                    <label><text>" Ch1 — Frein X"</text></label>
                 </hbox>
                 <hbox>
-                    <label><text>"Ch2 — Frein X (B) : "</text></label>
-                    <led><halpin>"el2024-ch2"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>18</size></led>
+                    <led><halpin>"el2024-ch2"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>16</size></led>
+                    <label><text>" Ch2 — Frein Y"</text></label>
                 </hbox>
                 <hbox>
-                    <label><text>"Ch3 — Enable X    : "</text></label>
-                    <led><halpin>"el2024-ch3"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>18</size></led>
+                    <led><halpin>"el2024-ch3"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>16</size></led>
+                    <label><text>" Ch3 — Frein Z"</text></label>
                 </hbox>
                 <hbox>
-                    <label><text>"Ch4 — Réservé     : "</text></label>
-                    <led><halpin>"el2024-ch4"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>18</size></led>
+                    <led><halpin>"el2024-ch4"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>16</size></led>
+                    <label><text>" Ch4 — Réservé"</text></label>
+                </hbox>
+            </vbox>
+            <vbox>
+                <hbox>
+                    <led><halpin>"x-enabled"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>16</size></led>
+                    <label><text>" Enable X"</text></label>
+                </hbox>
+                <hbox>
+                    <led><halpin>"y-enabled"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>16</size></led>
+                    <label><text>" Enable Y"</text></label>
+                </hbox>
+                <hbox>
+                    <led><halpin>"z-enabled"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>16</size></led>
+                    <label><text>" Enable Z"</text></label>
                 </hbox>
             </vbox>
         </hbox>
     </labelframe>
 
-    <!-- ================================================================ -->
-    <!-- SERVO LC10E — AXE X                                              -->
-    <!-- ================================================================ -->
-    <labelframe text="Servo LC10E — Axe X">
-
-        <!-- Position -->
+    <!-- ============================================================ -->
+    <!-- AXE X — LC10E pos.110                                          -->
+    <!-- ============================================================ -->
+    <labelframe text="Axe X — LC10E (pos.10)">
         <hbox>
-            <label><text>"Pos Cmd : "</text></label>
-            <number><halpin>"x-pos-cmd"</halpin><font>("Helvetica",12)</font><width>10</width><format>"+4.3f"</format></number>
+            <label><text>"Cmd:"</text></label>
+            <number><halpin>"x-pos-cmd"</halpin><font>("Helvetica",11)</font><width>9</width><format>"+4.3f"</format></number>
+            <label><text>" FB:"</text></label>
+            <number><halpin>"x-pos-fb"</halpin><font>("Helvetica",11)</font><width>9</width><format>"+4.3f"</format></number>
+            <label><text>" Err:"</text></label>
+            <number><halpin>"x-f-error"</halpin><font>("Helvetica",11,"bold")</font><width>8</width><format>"+3.4f"</format></number>
             <label><text>" mm"</text></label>
         </hbox>
         <hbox>
-            <label><text>"Pos FB  : "</text></label>
-            <number><halpin>"x-pos-fb"</halpin><font>("Helvetica",12)</font><width>10</width><format>"+4.3f"</format></number>
-            <label><text>" mm"</text></label>
-        </hbox>
-        <hbox>
-            <label><text>"Erreur  : "</text></label>
-            <number><halpin>"x-f-error"</halpin><font>("Helvetica",12,"bold")</font><width>10</width><format>"+4.4f"</format></number>
-            <label><text>" mm"</text></label>
-        </hbox>
-
-        <!-- Vitesse -->
-        <hbox>
-            <label><text>"Vit Cmd : "</text></label>
-            <number><halpin>"x-velocity"</halpin><font>("Helvetica",12)</font><width>8</width><format>"+4.1f"</format></number>
-            <label><text>" mm/s"</text></label>
-        </hbox>
-        <hbox>
-            <label><text>"Vit FB  : "</text></label>
-            <number><halpin>"x-velocity-fb"</halpin><font>("Helvetica",12)</font><width>8</width><format>"+4.1f"</format></number>
-            <label><text>" mm/s"</text></label>
-        </hbox>
-        <hbox>
-            <label><text>"Err Vit : "</text></label>
-            <number><halpin>"x-vel-error"</halpin><font>("Helvetica",11,"bold")</font><width>8</width><format>"+4.2f"</format></number>
-            <label><text>" mm/s  RPM : "</text></label>
+            <label><text>"Vit:"</text></label>
+            <number><halpin>"x-velocity"</halpin><font>("Helvetica",11)</font><width>7</width><format>"+4.1f"</format></number>
+            <label><text>" mm/s  Err:"</text></label>
+            <number><halpin>"x-vel-error"</halpin><font>("Helvetica",11)</font><width>6</width><format>"+4.2f"</format></number>
+            <label><text>"  RPM:"</text></label>
             <number><halpin>"x-motor-rpm"</halpin><font>("Helvetica",11)</font><width>6</width><format>"+5.0f"</format></number>
-            <label><text>" rpm"</text></label>
         </hbox>
-
-        <!-- Charge moteur -->
         <hbox>
-            <vbox>
-                <label><text>"Charge Moteur"</text></label>
-                <bar>
-                    <halpin>"x-torque-bar"</halpin>
-                    <min_>0</min_>
-                    <max_>300</max_>
-                    <bgcolor>"grey"</bgcolor>
-                    <fillcolor>"green"</fillcolor>
-                </bar>
-                <hbox>
-                    <label><text>"Couple : "</text></label>
-                    <number><halpin>"x-torque-pct"</halpin><font>("Helvetica",11,"bold")</font><width>6</width><format>"+5.1f"</format></number>
-                    <label><text>" %"</text></label>
-                </hbox>
-            </vbox>
-            <vbox>
-                <button>
-                    <halpin>"x-fault-reset"</halpin>
-                    <text>"RESET"</text>
-                </button>
-            </vbox>
+            <led><halpin>"x-fault"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"Flt "</text></label>
+            <led><halpin>"x-warning"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"Wrn "</text></label>
+            <led><halpin>"x-homed"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"Hm "</text></label>
+            <led><halpin>"x-limit-min"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"L- "</text></label>
+            <led><halpin>"x-limit-max"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"L+ "</text></label>
+            <led><halpin>"x-state-op"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"OP "</text></label>
+            <button><halpin>"x-fault-reset"</halpin><text>"RST"</text></button>
         </hbox>
-
-        <!-- Limites et home -->
-        <hbox>
-            <led><halpin>"x-limit-min"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>18</size></led>
-            <label><text>" Lim-"</text></label>
-            <label><text>"  "</text></label>
-            <led><halpin>"x-homed"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>18</size></led>
-            <label><text>" Homed"</text></label>
-            <label><text>"  "</text></label>
-            <led><halpin>"x-limit-max"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>18</size></led>
-            <label><text>" Lim+"</text></label>
-        </hbox>
-
-        <!-- État drive -->
-        <hbox>
-            <led><halpin>"x-enabled"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>18</size></led>
-            <label><text>" Enable"</text></label>
-            <label><text>"  "</text></label>
-            <led><halpin>"x-fault"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>18</size></led>
-            <label><text>" Fault"</text></label>
-            <label><text>"  "</text></label>
-            <led><halpin>"x-warning"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>18</size></led>
-            <label><text>" Warn"</text></label>
-        </hbox>
-
-        <!-- État EtherCAT esclave 0 -->
-        <hbox>
-            <label><text>"EtherCAT Esclave : "</text></label>
-            <led><halpin>"x-state-init"</halpin><on_color>"orange"</on_color><off_color>"grey"</off_color><size>13</size></led>
-            <label><text>"I"</text></label>
-            <led><halpin>"x-state-preop"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>13</size></led>
-            <label><text>"P"</text></label>
-            <led><halpin>"x-state-safeop"</halpin><on_color>"cyan"</on_color><off_color>"grey"</off_color><size>13</size></led>
-            <label><text>"S"</text></label>
-            <led><halpin>"x-state-op"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>13</size></led>
-            <label><text>"OP"</text></label>
-        </hbox>
-
     </labelframe>
 
-    <!-- ================================================================ -->
-    <!-- BROCHE VFD                                                        -->
-    <!-- EL2008 #1 (pos.5) → VFD X1-X8  |  EL1008 #3 (pos.10) ← VFD Y1-Y2 -->
-    <!-- EL4002 (pos.7) → AVI 0-10V                                       -->
-    <!-- ================================================================ -->
+    <!-- ============================================================ -->
+    <!-- AXE Y — LC10E pos.11                                          -->
+    <!-- ============================================================ -->
+    <labelframe text="Axe Y — LC10E (pos.11)">
+        <hbox>
+            <label><text>"Cmd:"</text></label>
+            <number><halpin>"y-pos-cmd"</halpin><font>("Helvetica",11)</font><width>9</width><format>"+4.3f"</format></number>
+            <label><text>" FB:"</text></label>
+            <number><halpin>"y-pos-fb"</halpin><font>("Helvetica",11)</font><width>9</width><format>"+4.3f"</format></number>
+            <label><text>" Err:"</text></label>
+            <number><halpin>"y-f-error"</halpin><font>("Helvetica",11,"bold")</font><width>8</width><format>"+3.4f"</format></number>
+            <label><text>" mm"</text></label>
+        </hbox>
+        <hbox>
+            <label><text>"Vit:"</text></label>
+            <number><halpin>"y-velocity"</halpin><font>("Helvetica",11)</font><width>7</width><format>"+4.1f"</format></number>
+            <label><text>" mm/s  Err:"</text></label>
+            <number><halpin>"y-vel-error"</halpin><font>("Helvetica",11)</font><width>6</width><format>"+4.2f"</format></number>
+            <label><text>"  RPM:"</text></label>
+            <number><halpin>"y-motor-rpm"</halpin><font>("Helvetica",11)</font><width>6</width><format>"+5.0f"</format></number>
+        </hbox>
+        <hbox>
+            <led><halpin>"y-fault"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"Flt "</text></label>
+            <led><halpin>"y-warning"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"Wrn "</text></label>
+            <led><halpin>"y-homed"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"Hm "</text></label>
+            <led><halpin>"y-limit-min"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"L- "</text></label>
+            <led><halpin>"y-limit-max"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"L+ "</text></label>
+            <led><halpin>"y-state-op"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"OP "</text></label>
+            <button><halpin>"y-fault-reset"</halpin><text>"RST"</text></button>
+        </hbox>
+    </labelframe>
+
+    <!-- ============================================================ -->
+    <!-- AXE Z — LC10E pos.12                                          -->
+    <!-- ============================================================ -->
+    <labelframe text="Axe Z — LC10E (pos.12)">
+        <hbox>
+            <label><text>"Cmd:"</text></label>
+            <number><halpin>"z-pos-cmd"</halpin><font>("Helvetica",11)</font><width>9</width><format>"+4.3f"</format></number>
+            <label><text>" FB:"</text></label>
+            <number><halpin>"z-pos-fb"</halpin><font>("Helvetica",11)</font><width>9</width><format>"+4.3f"</format></number>
+            <label><text>" Err:"</text></label>
+            <number><halpin>"z-f-error"</halpin><font>("Helvetica",11,"bold")</font><width>8</width><format>"+3.4f"</format></number>
+            <label><text>" mm"</text></label>
+        </hbox>
+        <hbox>
+            <label><text>"Vit:"</text></label>
+            <number><halpin>"z-velocity"</halpin><font>("Helvetica",11)</font><width>7</width><format>"+4.1f"</format></number>
+            <label><text>" mm/s  Err:"</text></label>
+            <number><halpin>"z-vel-error"</halpin><font>("Helvetica",11)</font><width>6</width><format>"+4.2f"</format></number>
+            <label><text>"  RPM:"</text></label>
+            <number><halpin>"z-motor-rpm"</halpin><font>("Helvetica",11)</font><width>6</width><format>"+5.0f"</format></number>
+        </hbox>
+        <hbox>
+            <led><halpin>"z-fault"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"Flt "</text></label>
+            <led><halpin>"z-warning"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"Wrn "</text></label>
+            <led><halpin>"z-homed"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"Hm "</text></label>
+            <led><halpin>"z-limit-min"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"L- "</text></label>
+            <led><halpin>"z-limit-max"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"L+ "</text></label>
+            <led><halpin>"z-state-op"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>15</size></led><label><text>"OP "</text></label>
+            <button><halpin>"z-fault-reset"</halpin><text>"RST"</text></button>
+        </hbox>
+    </labelframe>
+
+    <!-- ============================================================ -->
+    <!-- BROCHE VFD                                                    -->
+    <!-- EL2008 #1 pos.7 → X1-X8  |  EL4002 pos.6 → AVI             -->
+    <!-- EL1008 #3 pos.9 ← Y1-Y2                                     -->
+    <!-- ============================================================ -->
     <labelframe text="Broche VFD">
 
-        <!-- Vitesse -->
+        <!-- Vitesse consigne RPM -->
         <hbox>
             <label><text>"Vitesse : "</text></label>
             <number><halpin>"spindle-rpm"</halpin><font>("Helvetica",13,"bold")</font><width>7</width><format>"5.0f"</format></number>
@@ -168,26 +170,81 @@
         <bar>
             <halpin>"spindle-rpm-bar"</halpin>
             <min_>0</min_>
-            <max_>24000</max_>
+            <max_>18000</max_>
             <bgcolor>"grey"</bgcolor>
             <fillcolor>"blue"</fillcolor>
         </bar>
 
-        <!-- État VFD -->
+        <!-- Tension AVI réelle (lue depuis EL4002 aout-0-curr-dc) -->
         <hbox>
-            <led><halpin>"spindle-run"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>20</size></led>
-            <label><text>" Run (Y2)"</text></label>
-            <label><text>"  "</text></label>
-            <led><halpin>"spindle-fault"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>20</size></led>
-            <label><text>" Fault (Y1)"</text></label>
+            <label><text>"AVI réel : "</text></label>
+            <number><halpin>"avi-voltage"</halpin><font>("Helvetica",13,"bold")</font><width>5</width><format>"4.2f"</format></number>
+            <label><text>" V  / 10V"</text></label>
         </hbox>
+        <bar>
+            <halpin>"avi-voltage-bar"</halpin>
+            <min_>0</min_>
+            <max_>10</max_>
+            <bgcolor>"grey"</bgcolor>
+            <fillcolor>"green"</fillcolor>
+        </bar>
 
-        <!-- Bouton reset défaut -->
+        <!-- EL2008 #1 — Commandes vers VFD (pos.7) -->
+        <labelframe text="Cmds → VFD  (EL2008 #1  pos.4)">
+            <hbox>
+                <vbox>
+                    <hbox>
+                        <led><halpin>"el2008-x1"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X1 FWD  "</text></label>
+                    </hbox>
+                    <hbox>
+                        <led><halpin>"el2008-x2"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X2 REV  "</text></label>
+                    </hbox>
+                    <hbox>
+                        <led><halpin>"el2008-x3"</halpin><on_color>"orange"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X3 Stop "</text></label>
+                    </hbox>
+                    <hbox>
+                        <led><halpin>"el2008-x4"</halpin><on_color>"cyan"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X4 JogF "</text></label>
+                    </hbox>
+                </vbox>
+                <vbox>
+                    <hbox>
+                        <led><halpin>"el2008-x5"</halpin><on_color>"cyan"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X5 JogR  "</text></label>
+                    </hbox>
+                    <hbox>
+                        <led><halpin>"el2008-x6"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X6 Reset "</text></label>
+                    </hbox>
+                    <hbox>
+                        <led><halpin>"el2008-x7"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>14</size></led>
+                        <label><text>" X7 Enable"</text></label>
+                    </hbox>
+                    <hbox>
+                        <led><halpin>"el2008-x8"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X8 ExtFlt"</text></label>
+                    </hbox>
+                </vbox>
+            </hbox>
+        </labelframe>
+
+        <!-- EL1008 #3 — Retours VFD (pos.12) -->
+        <labelframe text="Retours ← VFD  (EL1008 #3  pos.9)">
+            <hbox>
+                <led><halpin>"el1008-y1"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>18</size></led>
+                <label><text>" Y1 Fault  "</text></label>
+                <led><halpin>"el1008-y2"</halpin><on_color>"green"</on_color><off_color>"grey"</off_color><size>18</size></led>
+                <label><text>" Y2 Run"</text></label>
+            </hbox>
+        </labelframe>
+
+        <!-- Boutons de contrôle -->
         <hbox>
-            <button>
-                <halpin>"spindle-fault-reset"</halpin>
-                <text>"RESET VFD (X6)"</text>
-            </button>
+            <button><halpin>"spindle-stop-btn"</halpin><text>"STOP (X3)"</text></button>
+            <button><halpin>"spindle-fault-reset"</halpin><text>"RESET (X6)"</text></button>
         </hbox>
 
     </labelframe>

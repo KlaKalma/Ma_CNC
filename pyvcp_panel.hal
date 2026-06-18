@@ -1,55 +1,101 @@
-# PyVCP Panel HAL connections for CSV Mode + PID (X-axis only)
-# Note: Uses PID velocity command signals (x-vel-cmd)
+# PyVCP — connexions HAL 3 axes XYZ (POSTGUI)
 
-# Load components for RPM calculation and velocity error
-loadrt scale names=scale.rpm-x
-loadrt sum2 names=sum2.x-verr
+# scale instances chargées dans spindle.hal (loadrt une seule fois par module)
+# Composants sum2 pour erreur vitesse
+loadrt sum2  names=sum2.x-verr,sum2.y-verr,sum2.z-verr
 
-addf scale.rpm-x servo-thread
-addf sum2.x-verr servo-thread
+addf sum2.x-verr    servo-thread
+addf sum2.y-verr    servo-thread
+addf sum2.z-verr    servo-thread
 
-# États EtherCAT Master
-net master-state-init lcec.0.state-init => pyvcp.master-state-init
-net master-state-preop lcec.0.state-preop => pyvcp.master-state-preop
+# --- EtherCAT Master ---
+net master-state-init   lcec.0.state-init   => pyvcp.master-state-init
+net master-state-preop  lcec.0.state-preop  => pyvcp.master-state-preop
 net master-state-safeop lcec.0.state-safeop => pyvcp.master-state-safeop
-net master-state-op lcec.0.state-op => pyvcp.master-state-op
+net master-state-op     lcec.0.state-op     => pyvcp.master-state-op
 
-# EL2024 #1 — état des 4 canaux (tous liés à x-enable)
-net x-enable => pyvcp.el2024-ch1 pyvcp.el2024-ch2 pyvcp.el2024-ch3 pyvcp.el2024-ch4
-
-# Connexions vers PyVCP - Axe X
-net x-pos-cmd => pyvcp.x-pos-cmd
-net x-pos-fb => pyvcp.x-pos-fb
-net x-f-error-display joint.0.f-error => pyvcp.x-f-error
-
-# Velocity command from PID (mm/s)
-# Error = cmd - fb, so negate feedback in sum2
-net x-vel-cmd => pyvcp.x-velocity sum2.x-verr.in0
-setp sum2.x-verr.gain1 -1.0
-net x-vel-fb cia402.0.velocity-fb => sum2.x-verr.in1 pyvcp.x-velocity-fb
-net x-vel-error sum2.x-verr.out => pyvcp.x-vel-error
-
-# Limit switches et home
-net x-limit-hard-min halui.joint.0.on-hard-min-limit => pyvcp.x-limit-min
-net x-limit-hard-max halui.joint.0.on-hard-max-limit => pyvcp.x-limit-max
-net x-is-homed joint.0.homed => pyvcp.x-homed
-
-# États du servo
+# --- EL2024 #1 — freins (machine-on) + LEDs enable axes ---
+# Les dout-0/1/2 sont reliés à machine-on dans LC10E.hal
+net machine-on => pyvcp.el2024-ch1 pyvcp.el2024-ch2 pyvcp.el2024-ch3
+# ch4 (spare) non connecté → LED grise
 net x-enable => pyvcp.x-enabled
-net x-fault => pyvcp.x-fault
-net x-warning-status cia402.0.stat-warning => pyvcp.x-warning
+net y-enable => pyvcp.y-enabled
+net z-enable => pyvcp.z-enabled
 
-# États EtherCAT du drive X (slave 0)
-net x-state-init lcec.0.0.slave-state-init => pyvcp.x-state-init
-net x-state-preop lcec.0.0.slave-state-preop => pyvcp.x-state-preop
-net x-state-safeop lcec.0.0.slave-state-safeop => pyvcp.x-state-safeop
-net x-state-op lcec.0.0.slave-state-op => pyvcp.x-state-op
+# --- Broche VFD ---
+# EL2008 #1 : affichage (dout-N, 0-indexé)
+net spindle-fwd    => pyvcp.el2008-x1
+net spindle-rev    => pyvcp.el2008-x2
+# X3 Stop : bouton PyVCP → dout-2 ET LED
+net spindle-stop-btn pyvcp.spindle-stop-btn => lcec.0.4.dout-2 pyvcp.el2008-x3
+# X4 / X5 : non connectés → LED grise
+# X6 Reset : bouton PyVCP → dout-5 ET LED
+net spindle-reset-btn pyvcp.spindle-fault-reset => lcec.0.4.dout-5 pyvcp.el2008-x6
+net spindle-enable => pyvcp.el2008-x7
+# X8 : non connecté → LED grise
 
-# Vitesse moteur en RPM (calculé depuis velocity command PID)
-# RPM = (mm/s / 5mm_par_tour) * 60 = mm/s * 12
-net x-vel-cmd => scale.rpm-x.in
-setp scale.rpm-x.gain 12.0
-net x-motor-rpm scale.rpm-x.out => pyvcp.x-motor-rpm
+# EL4002 : affichage vitesse consigne + tension AVI réelle
+net spindle-speed-abs => pyvcp.spindle-rpm pyvcp.spindle-rpm-bar
+# Tension AVI réelle (lue depuis aout-0-curr-dc, convertie par scale.avi-voltage)
+net avi-voltage scale.avi-voltage.out => pyvcp.avi-voltage pyvcp.avi-voltage-bar
 
-# Reset fault depuis PyVCP
-net x-fault-reset-pyvcp pyvcp.x-fault-reset => cia402.0.fault-reset
+# EL1008 #1 : affichage retours VFD
+net vfd-fault => pyvcp.el1008-y1
+net vfd-run   => pyvcp.el1008-y2
+
+# --- Axe X ---
+net x-pos-cmd  => pyvcp.x-pos-cmd
+net x-pos-fb   => pyvcp.x-pos-fb
+net x-f-error-display  joint.0.f-error        => pyvcp.x-f-error
+net x-vel-cmd          => pyvcp.x-velocity sum2.x-verr.in0
+net x-vel-fb           cia402.0.velocity-fb   => sum2.x-verr.in1
+net x-vel-error        sum2.x-verr.out        => pyvcp.x-vel-error
+setp sum2.x-verr.gain1 -1.0
+net x-limit-hard-min   halui.joint.0.on-hard-min-limit => pyvcp.x-limit-min
+net x-limit-hard-max   halui.joint.0.on-hard-max-limit => pyvcp.x-limit-max
+net x-is-homed         joint.0.homed          => pyvcp.x-homed
+net x-fault            => pyvcp.x-fault
+net x-warning-status   cia402.0.stat-warning  => pyvcp.x-warning
+net x-state-op         lcec.0.10.slave-state-op => pyvcp.x-state-op
+net x-fault-reset-pyvcp pyvcp.x-fault-reset   => cia402.0.fault-reset
+net x-vel-cmd          => scale.rpm-x.in
+setp scale.rpm-x.gain  12.0
+net x-motor-rpm        scale.rpm-x.out        => pyvcp.x-motor-rpm
+
+# --- Axe Y ---
+net y-pos-cmd  => pyvcp.y-pos-cmd
+net y-pos-fb   => pyvcp.y-pos-fb
+net y-f-error-display  joint.1.f-error        => pyvcp.y-f-error
+net y-vel-cmd          => pyvcp.y-velocity sum2.y-verr.in0
+net y-vel-fb           cia402.1.velocity-fb   => sum2.y-verr.in1
+net y-vel-error        sum2.y-verr.out        => pyvcp.y-vel-error
+setp sum2.y-verr.gain1 -1.0
+net y-limit-hard-min   halui.joint.1.on-hard-min-limit => pyvcp.y-limit-min
+net y-limit-hard-max   halui.joint.1.on-hard-max-limit => pyvcp.y-limit-max
+net y-is-homed         joint.1.homed          => pyvcp.y-homed
+net y-fault            => pyvcp.y-fault
+net y-warning-status   cia402.1.stat-warning  => pyvcp.y-warning
+net y-state-op         lcec.0.11.slave-state-op => pyvcp.y-state-op
+net y-fault-reset-pyvcp pyvcp.y-fault-reset   => cia402.1.fault-reset
+net y-vel-cmd          => scale.rpm-y.in
+setp scale.rpm-y.gain  12.0
+net y-motor-rpm        scale.rpm-y.out        => pyvcp.y-motor-rpm
+
+# --- Axe Z ---
+net z-pos-cmd  => pyvcp.z-pos-cmd
+net z-pos-fb   => pyvcp.z-pos-fb
+net z-f-error-display  joint.2.f-error        => pyvcp.z-f-error
+net z-vel-cmd          => pyvcp.z-velocity sum2.z-verr.in0
+net z-vel-fb           cia402.2.velocity-fb   => sum2.z-verr.in1
+net z-vel-error        sum2.z-verr.out        => pyvcp.z-vel-error
+setp sum2.z-verr.gain1 -1.0
+net z-limit-hard-min   halui.joint.2.on-hard-min-limit => pyvcp.z-limit-min
+net z-limit-hard-max   halui.joint.2.on-hard-max-limit => pyvcp.z-limit-max
+net z-is-homed         joint.2.homed          => pyvcp.z-homed
+net z-fault            => pyvcp.z-fault
+net z-warning-status   cia402.2.stat-warning  => pyvcp.z-warning
+net z-state-op         lcec.0.12.slave-state-op => pyvcp.z-state-op
+net z-fault-reset-pyvcp pyvcp.z-fault-reset   => cia402.2.fault-reset
+net z-vel-cmd          => scale.rpm-z.in
+setp scale.rpm-z.gain  12.0
+net z-motor-rpm        scale.rpm-z.out        => pyvcp.z-motor-rpm
