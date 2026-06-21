@@ -1,0 +1,66 @@
+########################################################################
+# io_test.hal — Harnais de test I/O EtherCAT autonome (Beckhoff)
+#
+# But : tester chaque canal de chaque module SANS motion, sans cia402,
+#       sans PID. Toutes les pins lcec sont LIBRES → setp/getp direct.
+#
+# LANCEMENT (FERMER LinuxCNC d'abord — un seul master EtherCAT possible) :
+#     cd /home/cnc/linuxcnc/configs/Ma_CNC
+#     halrun -I -f io_test.hal
+#   (-I garde le prompt halcmd ouvert après le chargement)
+#
+# Pour quitter :  exit
+########################################################################
+
+loadusr -W lcec_conf ethercat-io-test.xml
+loadrt lcec
+loadrt threads name1=io-thread period1=1000000
+
+addf lcec.read-all  io-thread
+addf lcec.write-all io-thread
+
+start
+
+# Confirmation visible que lcec est chargé et que les pins existent :
+# si tu vois la liste des dout-0..7 ci-dessous, le test est PRÊT.
+# (le slave met ~1-2s à passer OP ; vérifie avec 'ethercat slaves' dans
+#  un autre terminal — l'EL2008 pos 4 doit être en OP)
+show pin lcec.0.4
+
+########################################################################
+# CARTE DES PINS (rappel) — à utiliser au prompt halcmd
+########################################################################
+#
+# --- EL2024 #1  (slave 1) : FREINS moteurs ---  ATTENTION : relâcher un
+#     frein peut laisser tomber l'axe Z ! Tester axes horizontaux d'abord.
+#     setp lcec.0.1.dout-0  1   # Frein X
+#     setp lcec.0.1.dout-1  1   # Frein Y
+#     setp lcec.0.1.dout-2  1   # Frein Z   (DANGER chute Z)
+#     setp lcec.0.1.dout-3  1   # spare
+#
+# --- EL2008 #1  (slave 4) : COMMANDES VFD ---  ATTENTION : forward/enable
+#     peuvent DÉMARRER la broche. Ne tester que VFD hors tension/sortie coupée.
+#     setp lcec.0.4.dout-0  1   # X1 Forward   (DANGER broche)
+#     setp lcec.0.4.dout-1  1   # X2 Reverse   (DANGER broche)
+#     setp lcec.0.4.dout-2  1   # X3 Stop
+#     setp lcec.0.4.dout-3  1   # X4 Jog Forward
+#     setp lcec.0.4.dout-4  1   # X5 Reset défaut
+#     setp lcec.0.4.dout-5  1   # X6 External Fault
+#     setp lcec.0.4.dout-6  1   # X7 First Multi Speed (NON FONCTIONNELLE)
+#     setp lcec.0.4.dout-7  1   # X8 Jog Reverse (NON PRESENTE)
+#
+# --- EL4002  (slave 6) : sortie analogique AVI ---
+#     setp lcec.0.6.aout-0-enable 1
+#     setp lcec.0.6.aout-0-scale  10.0
+#     setp lcec.0.6.aout-0-value  5.0    # → 5V sur AVI (50%)
+#     getp lcec.0.6.aout-0-curr-dc       # duty réel (0-1)  ×10 = tension
+#
+# --- EL1008 #1  (slave 7) : ENTRÉES VFD (lecture seule, 100% sûr) ---
+#     getp lcec.0.7.din-0    # Y1 Fault
+#     getp lcec.0.7.din-1    # Y2 Run
+#
+# COMMANDES UTILES :
+#     show pin lcec.0.4          # toutes les pins du slave 4
+#     watch  pin lcec.0.7        # surveille les entrées en direct (Ctrl-C)
+#     setp lcec.0.4.dout-3 0     # éteindre
+########################################################################

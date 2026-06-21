@@ -127,15 +127,20 @@ Chercher le paramètre "Speed/Frequency Ratio" ou "Motor Rated Speed/Frequency" 
 
 ## VFD Broche — câblage Beckhoff
 
-**Commandes** EL2008 #1 (pos 4, `lcec.0.4.*`) → bornes X du VFD (dout-N, 0-indexé) :
-- dout-0 → X1 Forward
-- dout-1 → X2 Reverse
-- dout-2 → X3 Stop
-- dout-3 → X4 Jog Forward
-- dout-4 → X5 Jog Reverse / Vitesse fixe 1
-- dout-5 → X6 Reset défaut
-- dout-6 → X7 Enable
-- dout-7 → X8 External Fault
+**Commandes** EL2008 #1 (pos 4, `lcec.0.4.*`) → bornes X du VFD (dout-N, 0-indexé).
+Mapping recâblé le 2026-06-21 (paramètres VFD P91-P98) :
+- dout-0 → X1 Forward      (P91) → `spindle.0.forward`
+- dout-1 → X2 Reverse      (P92) → `spindle.0.reverse`
+- dout-2 → X3 Stop         (P93) → bouton PyVCP
+- dout-3 → X4 Jog Forward  (P94) → non connecté
+- dout-4 → X5 Reset défaut (P95) → bouton PyVCP
+- dout-5 → X6 External Fault (P96) → non connecté
+- dout-6 → X7 First Multi Speed (P97) → **NON FONCTIONNELLE (erreur VFD)** — ne pas piloter
+- dout-7 → X8 Jog Reverse  (P98) → **NON PRÉSENTE** — non connecté
+
+⚠️ Pas de borne « Enable » dans ce câblage : Forward/Reverse sont les commandes run
+(la broche tourne quand X1 ou X2 est actif). L'ancien `spindle.0.on → dout-6` a été
+retiré car il déclenchait X7 (multi-speed) en erreur à chaque M3.
 
 **Retours** VFD → EL1008 #1 (pos 7, `lcec.0.7.*`) :
 - din-0 ← Y1 Fault
@@ -144,6 +149,42 @@ Chercher le paramètre "Speed/Frequency Ratio" ou "Motor Rated Speed/Frequency" 
 **Référence analogique** EL4002 (pos 6, `lcec.0.6.*`) :
 - aout-0-value → VFD AVI (float RPM, 0-10V via scale=18000)  ← 18000 RPM = 10V = 1200 Hz
 - aout-1-value → Référence fixe 100% (`setp lcec.0.6.aout-1-value 1.0`)
+
+## ⚠️ CRITIQUE — NPN vs PNP : entrées VFD ↔ sorties Beckhoff
+
+**Constat (vérifié sur la machine le 2026-06-21) :** les entrées numériques X1-X8 du
+VFD **FC300 sont en NPN (sinking, actives à 0V)** : elles ont un pull-up interne à
++24V et s'activent quand on les **tire à 0V (COM)**. Le FC300 **n'a PAS de cavalier
+NPN/PNP** (confirmé manuel p.11 + recherches web) — c'est NPN figé.
+
+**Le problème :** l'**EL2008 est une sortie sourcing (PNP)** — elle ne sait que
+*sortir +24V* ou se mettre en OFF (haute impédance). Elle ne peut **jamais tirer à 0V**.
+Donc elle ne peut **pas** activer une entrée NPN. Symptôme : envoyer +24V sur X1 ne
+fait rien ; relier X1↔COM (0V) à la main démarre la broche. **Aucune inversion HAL ne
+corrige ça — c'est physique.**
+
+**Solution : remplacer l'EL2008 (pos 4) par un EL2088.**
+
+| | EL2008 (actuel) | **EL2088** (à mettre) |
+|---|---|---|
+| Type | sourcing / PNP (+24V) | **ground switching / NPN (0V)** |
+| Canaux / I / U | 8 / 0.5A / 24V | 8 / 0.5A / 24V |
+| Pins lcec | `dout-0..7` | `dout-0..7` (identiques) |
+
+- **Drop-in total** : supporté par lcec (`type="EL2088"`, PID 0x08283052). Seul
+  changement : `type="EL2008"` → `type="EL2088"` dans `ethercat-conf.xml` pos 4.
+  **Zéro changement HAL** (logique `dout-N ON = fonction active` conservée — l'EL2088
+  inverse l'électrique : ON = tire à 0V = active l'entrée NPN).
+- Câblage : `dout-N` → X_n du VFD, et **0V de l'EL2088 relié au COM du VFD**.
+- Stopgap sans EL2088 : carte relais (EL2008 → bobine → contact NO entre X_n et COM).
+
+**Règle générale — quel module pour quoi :**
+- **Sorties vers entrées NPN d'un VFD/appareil** (FC300 X1-X8) → **EL2088** (ground/NPN).
+- **Sorties vers actionneurs qui veulent +24V** (freins EL2024, relais) → **sourcing/PNP** OK.
+- **Analogique** (EL4002 → AVI) : indifférent au NPN/PNP, besoin seulement d'une **masse
+  commune** (0V EL4002 ↔ COM VFD). C'est pour ça que l'AVI marchait déjà.
+- **Entrées lisant les retours VFD** (EL1008 ← Y1/Y2) : Y1/Y2 sont des **contacts secs
+  relais** du VFD → câbler +24V à travers le contact vers l'entrée EL1008 (polarité libre).
 
 ## Sécurités prévues (EL1008 #1, #2)
 

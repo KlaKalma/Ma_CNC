@@ -189,6 +189,20 @@
             <fillcolor>"green"</fillcolor>
         </bar>
 
+        <!-- Frequence calculee (AVI 10V = 1200 Hz) -->
+        <hbox>
+            <label><text>"Freq.  : "</text></label>
+            <number><halpin>"avi-hz"</halpin><font>("Helvetica",13,"bold")</font><width>6</width><format>"4.0f"</format></number>
+            <label><text>" Hz / 1200"</text></label>
+        </hbox>
+        <bar>
+            <halpin>"avi-hz-bar"</halpin>
+            <min_>0</min_>
+            <max_>1200</max_>
+            <bgcolor>"grey"</bgcolor>
+            <fillcolor>"orange"</fillcolor>
+        </bar>
+
         <!-- EL2008 #1 — Commandes vers VFD (pos.7) -->
         <labelframe text="Cmds → VFD  (EL2008 #1  pos.4)">
             <hbox>
@@ -212,20 +226,20 @@
                 </vbox>
                 <vbox>
                     <hbox>
-                        <led><halpin>"el2008-x5"</halpin><on_color>"cyan"</on_color><off_color>"grey"</off_color><size>14</size></led>
-                        <label><text>" X5 JogR  "</text></label>
+                        <led><halpin>"el2008-x5"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X5 Reset "</text></label>
                     </hbox>
                     <hbox>
-                        <led><halpin>"el2008-x6"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>14</size></led>
-                        <label><text>" X6 Reset "</text></label>
+                        <led><halpin>"el2008-x6"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X6 ExtFlt"</text></label>
                     </hbox>
                     <hbox>
-                        <led><halpin>"el2008-x7"</halpin><on_color>"green"</on_color><off_color>"red"</off_color><size>14</size></led>
-                        <label><text>" X7 Enable"</text></label>
+                        <led><halpin>"el2008-x7"</halpin><on_color>"grey"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X7 MultiS"</text></label>
                     </hbox>
                     <hbox>
-                        <led><halpin>"el2008-x8"</halpin><on_color>"red"</on_color><off_color>"grey"</off_color><size>14</size></led>
-                        <label><text>" X8 ExtFlt"</text></label>
+                        <led><halpin>"el2008-x8"</halpin><on_color>"grey"</on_color><off_color>"grey"</off_color><size>14</size></led>
+                        <label><text>" X8 JogR  "</text></label>
                     </hbox>
                 </vbox>
             </hbox>
@@ -244,7 +258,7 @@
         <!-- Boutons de contrôle -->
         <hbox>
             <button><halpin>"spindle-stop-btn"</halpin><text>"STOP (X3)"</text></button>
-            <button><halpin>"spindle-fault-reset"</halpin><text>"RESET (X6)"</text></button>
+            <button><halpin>"spindle-fault-reset"</halpin><text>"RESET (X5)"</text></button>
         </hbox>
 
     </labelframe>

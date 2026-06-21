@@ -30,6 +30,12 @@
     <!-- pos.3 : EL2024 #3  (à configurer) -->
 
     <!-- ── EL2008 #1 — pos.4 — Commandes VFD X1-X8 ──────────────── -->
+    <!-- ⚠️ NPN/PNP : le VFD FC300 a des entrées NPN (actives à 0V).      -->
+    <!-- L'EL2008 est sourcing/PNP (+24V) → INCOMPATIBLE, n'active pas    -->
+    <!-- les entrées. Remplacer par un EL2088 (ground switching/NPN,      -->
+    <!-- drop-in, mêmes pins dout-0..7) : passer type="EL2088" ici.       -->
+    <!-- Voir CLAUDE.md section "NPN vs PNP". Tant que le module physique -->
+    <!-- est un EL2008, garder type="EL2008".                            -->
     <slave idx="4" type="EL2008"/>
 
     <!-- pos.5 : EL2008 #2  (à configurer) -->

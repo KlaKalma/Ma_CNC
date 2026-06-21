@@ -71,37 +71,54 @@
 
 ---
 
-## EL2008 #1 — Position 5 — `lcec.0.5.*` → Commandes VFD broche
+## EL2008 #1 — Position 4 — `lcec.0.4.*` → Commandes VFD broche
 
 **Module** : Beckhoff EL2008 — 8 sorties digitales 24VDC, 0.5A par canal  
-**Câblage direct** : output-N → borne XN du VFD (correspondance 1:1)  
-**État** : Câblé, à configurer dans `ethercat-conf.xml`
+**Type natif** : `dout-N` (0-indexé) → borne X(N+1) du VFD  
+**Mapping recâblé le 2026-06-21** (paramètres VFD P91-P98)  
+**État** : Configuré — ⚠️ **module à remplacer par EL2088 (voir note NPN/PNP ci-dessous)**
 
-| Canal | Borne EL | PDO Index | HAL Pin | Borne VFD | Fonction VFD | État |
-|-------|----------|-----------|---------|-----------|--------------|------|
-| 1 | 1 | 0x7000:01 | `lcec.0.5.output-1` | **X1** | Forward (FWD) | Câblé |
-| 2 | 2 | 0x7010:01 | `lcec.0.5.output-2` | **X2** | Reverse (REV) | Câblé |
-| 3 | 3 | 0x7020:01 | `lcec.0.5.output-3` | **X3** | Stop | Câblé |
-| 4 | 4 | 0x7030:01 | `lcec.0.5.output-4` | **X4** | Jog Forward | Câblé |
-| 5 | 5 | 0x7040:01 | `lcec.0.5.output-5` | **X5** | Jog Reverse / Vitesse fixe 1 | Câblé |
-| 6 | 6 | 0x7050:01 | `lcec.0.5.output-6` | **X6** | Reset défaut VFD | Câblé |
-| 7 | 7 | 0x7060:01 | `lcec.0.5.output-7` | **X7** | Enable broche | Câblé |
-| 8 | 8 | 0x7070:01 | `lcec.0.5.output-8` | **X8** | External Fault in | Câblé |
+> ### ⚠️ NPN/PNP — EL2008 incompatible avec le VFD FC300
+> Les entrées X1-X8 du **FC300 sont NPN (actives à 0V)** : pull-up interne à +24V,
+> s'activent en reliant X_n↔COM (0V). Le FC300 **n'a pas de cavalier NPN/PNP**.
+> L'**EL2008 est sourcing/PNP** (sort +24V uniquement) → il ne peut **pas tirer à 0V**
+> → il **n'active jamais** ces entrées. *Vérifié sur machine 2026-06-21 : +24V sur X1 =
+> rien ; X1↔COM = la broche démarre.* Aucun correctif logiciel possible (physique).
+>
+> **Solution : remplacer l'EL2008 (pos 4) par un EL2088** = version *ground switching
+> (NPN)* de l'EL2008 (8ch / 0.5A / 24V, mêmes pins `dout-0..7`). Supporté par lcec
+> (`type="EL2088"`, PID `0x08283052`). **Drop-in** : seul changement
+> `type="EL2008"`→`"EL2088"` dans `ethercat-conf.xml`, **zéro changement HAL** (logique
+> `dout-N ON = actif` conservée). Câbler le **0V de l'EL2088 au COM du VFD**.
+> Stopgap sans EL2088 : carte relais (dout-N → bobine → contact NO entre X_n et COM).
 
-**Connexions HAL suggérées** (à ajouter dans le HAL broche) :
+| dout | Borne EL | HAL Pin | Borne VFD | Param | Fonction VFD | Connexion HAL |
+|------|----------|---------|-----------|-------|--------------|---------------|
+| 0 | 1 | `lcec.0.4.dout-0` | **X1** | P91 | Forward (FWD) | `spindle.0.forward` |
+| 1 | 2 | `lcec.0.4.dout-1` | **X2** | P92 | Reverse (REV) | `spindle.0.reverse` |
+| 2 | 3 | `lcec.0.4.dout-2` | **X3** | P93 | Stop | bouton PyVCP |
+| 3 | 4 | `lcec.0.4.dout-3` | **X4** | P94 | Jog Forward | non connecté |
+| 4 | 5 | `lcec.0.4.dout-4` | **X5** | P95 | Reset défaut | bouton PyVCP |
+| 5 | 6 | `lcec.0.4.dout-5` | **X6** | P96 | External Fault | non connecté |
+| 6 | 7 | `lcec.0.4.dout-6` | **X7** | P97 | First Multi Speed — **NON FONCT.** | non connecté |
+| 7 | 8 | `lcec.0.4.dout-7` | **X8** | P98 | Jog Reverse — **NON PRÉSENTE** | non connecté |
+
+⚠️ Aucune borne « Enable » : Forward/Reverse = commandes run. L'ancien
+`spindle.0.on → dout-6` a été retiré (déclenchait X7 multi-speed en erreur).
+
+**Connexions HAL réelles** (dans `spindle.hal` + `pyvcp_panel.hal`) :
 ```
-net spindle-fwd    spindle.0.forward      => lcec.0.5.output-1
-net spindle-rev    spindle.0.reverse      => lcec.0.5.output-2
-net spindle-stop   spindle.0.brake        => lcec.0.5.output-3
-net spindle-on     spindle.0.on           => lcec.0.5.output-7
-net spindle-fault-reset pyvcp.spindle-reset => lcec.0.5.output-6
+net spindle-fwd       spindle.0.forward         => lcec.0.4.dout-0
+net spindle-rev       spindle.0.reverse         => lcec.0.4.dout-1
+net spindle-stop-btn  pyvcp.spindle-stop-btn    => lcec.0.4.dout-2
+net spindle-reset-btn pyvcp.spindle-fault-reset => lcec.0.4.dout-4
 ```
 
 <details>
-<summary>XML à ajouter dans ethercat-conf.xml</summary>
+<summary>XML dans ethercat-conf.xml</summary>
 
 ```xml
-<slave idx="5" type="el2008" vid="00000002" pid="07D83052"/>
+<slave idx="4" type="EL2008"/>
 ```
 </details>
 

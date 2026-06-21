@@ -363,6 +363,56 @@ def generate_3phase_sine_test(output_file="/home/cnc/linuxcnc/nc_files/3phase_si
     print(f"Total    : {t_1 + t_2:.1f}s de mouvement  +  5s rampe broche")
 
 
+def generate_spindle_only_test(output_file="/home/cnc/linuxcnc/nc_files/3phase_broche_seule.ngc"):
+    """
+    Broche SEULE : rampe 0->1000 RPM puis sinus 1000-3000 RPM, AUCUN mouvement servo.
+    Sert a tester l'at-speed broche isolement (la broche atteint-elle la vitesse,
+    Y2 'Run' remonte-t-il ?). Tout en S + G4 dwells, aucun G1.
+    """
+    S_min, S_max = 1000.0, 3000.0
+    S_mid, S_amp = (S_max + S_min) / 2, (S_max - S_min) / 2
+
+    g = ["%"]
+    g.append("(3phase_broche_seule.ngc — BROCHE SEULE, aucun mouvement servo)")
+    g.append("(Rampe 0->1000 RPM puis sinus 1000-3000 RPM)")
+    g.append("(But : verifier que la broche atteint sa vitesse / retour Y2 Run)")
+    g.append("(Prerequis : F2 + sortie VFD active)")
+    g.append("G21 G90")
+    g.append("")
+
+    # Rampe 0 -> 1000 RPM en 5 s
+    ramp_n, ramp_dwell = 100, 0.05
+    g.append(f"(Rampe : 0 -> {S_min:.0f} RPM en {ramp_n*ramp_dwell:.0f} s)")
+    g.append(f"M3 S{S_min/ramp_n:.0f}")
+    for i in range(1, ramp_n + 1):
+        g.append(f"S{S_min*i/ramp_n:.0f}")
+        g.append(f"G4 P{ramp_dwell}")
+    g.append("G4 P0.5")
+    g.append("")
+
+    # Oscillation 1000-3000 RPM, periode 2.5 s, ~4 cycles (10 s)
+    g.append(f"(Oscillation {S_min:.0f}-{S_max:.0f} RPM x4 cycles)")
+    period, dwell = 2.5, 0.05
+    n = int(round(4 * period / dwell))
+    last_s = S_min
+    for k in range(1, n + 1):
+        t = k * dwell
+        s = S_mid + S_amp * math.sin(2 * math.pi * t / period)
+        if abs(s - last_s) >= 20:
+            g.append(f"S{s:.0f}")
+            last_s = s
+        g.append(f"G4 P{dwell}")
+    g.append("")
+
+    g.append("M5")
+    g.append("M2")
+    g.append("%")
+
+    with open(output_file, 'w') as f:
+        f.write('\n'.join(g))
+    print(f"Fichier : {output_file}  ({len(g)} lignes, aucun G1)")
+
+
 def generate_sequential_3axis_test(output_file="/home/cnc/linuxcnc/nc_files/servo_seq_xyz.ngc"):
     """
     Test SEQUENTIEL : chaque axe testé seul, l'un apres l'autre (X -> Y -> Z),

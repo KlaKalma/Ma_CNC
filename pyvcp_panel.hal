@@ -23,21 +23,22 @@ net y-enable => pyvcp.y-enabled
 net z-enable => pyvcp.z-enabled
 
 # --- Broche VFD ---
-# EL2008 #1 : affichage (dout-N, 0-indexé)
+# EL2008 #1 : affichage (dout-N, 0-indexé) — mapping recâblé 2026-06-21
 net spindle-fwd    => pyvcp.el2008-x1
 net spindle-rev    => pyvcp.el2008-x2
 # X3 Stop : bouton PyVCP → dout-2 ET LED
 net spindle-stop-btn pyvcp.spindle-stop-btn => lcec.0.4.dout-2 pyvcp.el2008-x3
-# X4 / X5 : non connectés → LED grise
-# X6 Reset : bouton PyVCP → dout-5 ET LED
-net spindle-reset-btn pyvcp.spindle-fault-reset => lcec.0.4.dout-5 pyvcp.el2008-x6
-net spindle-enable => pyvcp.el2008-x7
-# X8 : non connecté → LED grise
+# X4 Jog FWD : non connecté → LED grise
+# X5 Reset : bouton PyVCP → dout-4 ET LED
+net spindle-reset-btn pyvcp.spindle-fault-reset => lcec.0.4.dout-4 pyvcp.el2008-x5
+# X6 Ext Fault / X7 Multi Speed (non fonct.) / X8 Jog REV (non prés.) : non connectés → LED grise
 
 # EL4002 : affichage vitesse consigne + tension AVI réelle
 net spindle-speed-abs => pyvcp.spindle-rpm pyvcp.spindle-rpm-bar
 # Tension AVI réelle (lue depuis aout-0-curr-dc, convertie par scale.avi-voltage)
 net avi-voltage scale.avi-voltage.out => pyvcp.avi-voltage pyvcp.avi-voltage-bar
+# Fréquence calculée (aout-0-curr-dc × 1200, convertie par scale.avi-hz)
+net avi-hz scale.avi-hz.out => pyvcp.avi-hz pyvcp.avi-hz-bar
 
 # EL1008 #1 : affichage retours VFD
 net vfd-fault => pyvcp.el1008-y1

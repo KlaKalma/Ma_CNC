@@ -8,27 +8,39 @@
 ########################################################################
 
 # scale.rpm-x/y/z : calcul RPM moteur (pyvcp_panel.hal les utilise)
-loadrt scale names=scale.rpm-x,scale.rpm-y,scale.rpm-z,scale.avi-voltage
+loadrt scale names=scale.rpm-x,scale.rpm-y,scale.rpm-z,scale.avi-voltage,scale.avi-hz
 
 addf scale.rpm-x       servo-thread
 addf scale.rpm-y       servo-thread
 addf scale.rpm-z       servo-thread
 addf scale.avi-voltage servo-thread
+addf scale.avi-hz      servo-thread
 
 # Tension AVI réelle : EL4002 aout-0-curr-dc (0-1) × 10 = 0-10V
 setp scale.avi-voltage.gain 10.0
-net avi-curr-dc lcec.0.6.aout-0-curr-dc => scale.avi-voltage.in
+# Fréquence calculée : aout-0-curr-dc (0-1) × 1200 = 0-1200 Hz (10V = 1200 Hz)
+setp scale.avi-hz.gain 1200.0
+net avi-curr-dc lcec.0.6.aout-0-curr-dc => scale.avi-voltage.in scale.avi-hz.in
 
 # --- Commandes numériques → VFD (EL2008 #1, slave 4) ---
-# dout-N = VFD borne X(N+1) — 0-indexé : dout-0=X1, dout-1=X2, ..., dout-6=X7
+# ⚠️ NPN/PNP : entrées VFD FC300 = NPN (actives à 0V). L'EL2008 est sourcing/PNP
+# (+24V) → n'active PAS ces entrées. Remplacer le module par un EL2088 (ground
+# switching/NPN). Aucun changement ici : mêmes pins dout-N, même logique
+# (dout ON = actif). Voir CLAUDE.md "NPN vs PNP" + ethercat-conf.xml pos 4.
+# Mapping recâblé le 2026-06-21 (dout-N → borne VFD) :
+#   dout-0=X1 Forward   dout-1=X2 Reverse   dout-2=X3 Stop
+#   dout-3=X4 Jog FWD   dout-4=X5 Reset     dout-5=X6 Ext Fault
+#   dout-6=X7 First Multi Speed (NON FONCTIONNELLE — erreur VFD, ne pas piloter)
+#   dout-7=X8 Jog Reverse        (NON PRESENTE)
+# Pas de borne "Enable" dans ce câblage : Forward/Reverse = commandes run.
 net spindle-fwd    spindle.0.forward => lcec.0.4.dout-0   # X1 Forward
 net spindle-rev    spindle.0.reverse => lcec.0.4.dout-1   # X2 Reverse
-# dout-2 (X3 Stop)   : bouton PyVCP → connecté dans pyvcp_panel.hal
-# dout-3 (X4 Jog FWD): non connecté
-# dout-4 (X5 Jog REV): non connecté
-# dout-5 (X6 Reset)  : bouton PyVCP → connecté dans pyvcp_panel.hal
-net spindle-enable spindle.0.on => lcec.0.4.dout-6        # X7 Enable
-# dout-7 (X8 Ext Fault): non connecté
+# dout-2 (X3 Stop)    : bouton PyVCP → connecté dans pyvcp_panel.hal
+# dout-3 (X4 Jog FWD) : non connecté
+# dout-4 (X5 Reset)   : bouton PyVCP → connecté dans pyvcp_panel.hal
+# dout-5 (X6 Ext Fault): non connecté (ne pas activer = pas de défaut forcé)
+# dout-6 (X7 Multi Speed): NON FONCTIONNELLE → laisser non connecté
+# dout-7 (X8 Jog REV)  : NON PRESENTE → laisser non connecté
 
 # --- Référence analogique → VFD AVI (EL4002, slave 6) ---
 # EL4002 natif : aout-N-value (float), scale RPM → tension 0-10V
