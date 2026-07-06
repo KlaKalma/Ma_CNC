@@ -1,0 +1,20 @@
+########################################################################
+# calib_homing.hal — chargé UNIQUEMENT par LC10E-calib.ini (config calibration)
+#
+# But : (re)définir l'origine machine de l'axe X via le HOMING INTERNE du
+#       variateur LC10E, déclenché par la FSM de homing de LinuxCNC.
+#
+# Principe (cf. cia402.comp + manuel §7.9 / Annexe 2) :
+#   LinuxCNC homing (HOME_USE_INDEX) -> joint.0.index-enable=1
+#     -> cia402.0.home=1 -> opmode bascule en 6 (Home) + bit4 du controlword
+#     -> le drive auto-home (méthode 6098 réglée AU PANNEAU : va tamponner la
+#        fin de course - puis le 1er signal Z) -> stat_homed
+#     -> cia402 relâche index-enable -> LinuxCNC fixe la position à HOME_OFFSET.
+#   Toute la séquence est supervisée par la FSM => machine ON, pas de faute.
+#
+# Ce fichier réactive seulement le lien X (commenté dans LC10E.hal pour le mode
+# absolu quotidien). Y/Z ont déjà leur lien index-enable<=>cia402.home actif dans
+# LC10E.hal et restent en home immédiat dans cette config (pas encore équipés).
+########################################################################
+
+net x-home-index joint.0.index-enable <=> cia402.0.home

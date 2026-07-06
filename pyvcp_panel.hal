@@ -52,8 +52,9 @@ net x-vel-cmd          => pyvcp.x-velocity sum2.x-verr.in0
 net x-vel-fb           cia402.0.velocity-fb   => sum2.x-verr.in1
 net x-vel-error        sum2.x-verr.out        => pyvcp.x-vel-error
 setp sum2.x-verr.gain1 -1.0
-net x-limit-hard-min   halui.joint.0.on-hard-min-limit => pyvcp.x-limit-min
-net x-limit-hard-max   halui.joint.0.on-hard-max-limit => pyvcp.x-limit-max
+# LED L-/L+ = état réel des capteurs de proximité (din-not/din-pot via 0x60FD)
+net x-neg-lim          => pyvcp.x-limit-min
+net x-pos-lim          => pyvcp.x-limit-max
 net x-is-homed         joint.0.homed          => pyvcp.x-homed
 net x-fault            => pyvcp.x-fault
 net x-warning-status   cia402.0.stat-warning  => pyvcp.x-warning
@@ -100,3 +101,13 @@ net z-fault-reset-pyvcp pyvcp.z-fault-reset   => cia402.2.fault-reset
 net z-vel-cmd          => scale.rpm-z.in
 setp scale.rpm-z.gain  12.0
 net z-motor-rpm        scale.rpm-z.out        => pyvcp.z-motor-rpm
+
+# --- Référencement : boutons Home par drive (via halui) + LED « homing » ---
+# Boutons -> demande de homing du joint. En config normale = home absolu
+# instantané ; en config calibration (LC10E-calib.ini) = homing piloté drive.
+net home-x-req     pyvcp.home-x-btn       => halui.joint.0.home
+net home-y-req     pyvcp.home-y-btn       => halui.joint.1.home
+net home-z-req     pyvcp.home-z-btn       => halui.joint.2.home
+net x-homing-stat  cia402.0.stat-homing   => pyvcp.x-homing
+net y-homing-stat  cia402.1.stat-homing   => pyvcp.y-homing
+net z-homing-stat  cia402.2.stat-homing   => pyvcp.z-homing

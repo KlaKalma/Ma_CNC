@@ -59,6 +59,23 @@
     </labelframe>
 
     <!-- ============================================================ -->
+    <!-- RÉFÉRENCEMENT / HOMING — un bouton par drive                  -->
+    <!--   Config normale (LC10E.ini)      : Home = absolu instantané   -->
+    <!--   Config calib (LC10E-calib.ini)  : Home X = le drive auto-home -->
+    <!--   vers la fin de course − + signal Z (LED jaune = en cours).    -->
+    <!-- ============================================================ -->
+    <labelframe text="Référencement (Home par drive)">
+        <hbox>
+            <button><halpin>"home-x-btn"</halpin><text>"Home X"</text></button>
+            <led><halpin>"x-homing"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>14</size></led>
+            <button><halpin>"home-y-btn"</halpin><text>"Home Y"</text></button>
+            <led><halpin>"y-homing"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>14</size></led>
+            <button><halpin>"home-z-btn"</halpin><text>"Home Z"</text></button>
+            <led><halpin>"z-homing"</halpin><on_color>"yellow"</on_color><off_color>"grey"</off_color><size>14</size></led>
+        </hbox>
+    </labelframe>
+
+    <!-- ============================================================ -->
     <!-- AXE X — LC10E pos.110                                          -->
     <!-- ============================================================ -->
     <labelframe text="Axe X — LC10E (pos.10)">

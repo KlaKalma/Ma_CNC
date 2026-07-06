@@ -192,4 +192,104 @@ corrige ça — c'est physique.**
 - Palpeur pièce
 - Capteur outil dans broche / longueur outil
 - Pressostat air
-- Fins de course : sur les variateurs drives (pas sur Beckhoff)
+- Fins de course : **sur les variateurs LC10E** (pas sur Beckhoff) — ✅ implémenté sur X,
+  voir section ci-dessous.
+
+## Fins de course — capteurs de proximité sur les drives LC10E
+
+Capteurs de proximité **PNP 3 fils** (brun=+24V, bleu=0V, noir=signal), un à chaque
+extrémité de course, **câblés sur le connecteur de contrôle CN2 du drive** concerné.
+Implémenté et validé sur X (slave idx 10) le 2026-06-21 ; recette identique pour Y/Z.
+
+### Câblage CN2 (par drive)
+
+| Élément | Borne CN2 |
+|---------|-----------|
+| Capteur extrémité **+X**, fil noir | **DI0 = broche 5** |
+| Capteur extrémité **−X**, fil noir | **DI1 = broche 4** |
+| Bruns (les 2) → **+24V** | broche 7 ou 9 |
+| Bleus (les 2) → **0V** | broche 8 ou 10 |
+| **Cavalier DICOM (broche 6) → 0V** | broche 8/10 (obligatoire pour PNP) |
+
+### Paramètres drive — À RÉGLER AU PANNEAU (DI0..DI4 ↔ P03.02..P03.10)
+
+⚠️ **Régler ces valeurs AU PANNEAU du drive**, pas par SDO : les écritures SDO ne
+persistent **pas** en EEPROM (vérifié — P03.03 écrit par SDO est revenu à 0 après
+power-cycle). Au panneau, ça persiste.
+
+- Fonctions (déjà aux valeurs d'usine de ce modèle) :
+  `P03.02=14` (DI0→P-OT, forward), `P03.04=15` (DI1→N-OT, reverse), `P03.06=31` (DI2→origine).
+- **Logique = 1 (actif HAUT) — LE point clé : `P03.03=1`, `P03.05=1`, `P03.07=1`.**
+  Nos capteurs se comportent en **NO** (sortie +24V quand le métal/la butée est détecté).
+  Actif haut ⇒ l'overtravel se déclenche **uniquement au contact**, pas au repos.
+  (Au départ on croyait NC/actif-bas=0 ; faux. Avec logique 0, l'erreur Er.950/952
+  apparaissait au repos et disparaissait au métal — comportement inversé.)
+- `P02.07=1` : overtravel = arrêt vitesse nulle + verrouillage position.
+- Er.950 (P-OT) / Er.952 (N-OT) sont des **warnings réinitialisables**, pas des défauts durs.
+- ⚠️ Fail-safe : NO + actif haut ⇒ un **fil coupé = limite NON détectée**. Pour le
+  fail-safe (fil coupé→arrêt), il faudrait des capteurs **NC + logique 0**.
+
+### Lecture dans LinuxCNC (par drive)
+
+État des entrées remonté via l'objet CIA402 **`0x60FD`** (déjà dans le TxPDO d'usine).
+Bits : `bit0`=N-OT, `bit1`=P-OT, `bit2`=origine ; `bits20..24`=DI0..DI4 bruts.
+
+1. `ethercat-conf.xml` — dans le TxPDO `<pdo idx="1a00">` du slave, ajouter une
+   `pdoEntry idx="60FD" halType="complex"` avec des `complexEntry` (cf. le bloc du
+   slave idx 10). Crée les pins `lcec.0.<idx>.din-{not,pot,home,di0,di1}`.
+2. `LC10E.hal` — relier les bits de fonction aux limites du joint :
+   ```
+   net <axe>-pos-lim lcec.0.<idx>.din-pot => joint.<n>.pos-lim-sw-in
+   net <axe>-neg-lim lcec.0.<idx>.din-not => joint.<n>.neg-lim-sw-in
+   ```
+   (X : idx 10 / joint 0 — fait. Y : idx 11 / joint 1. Z : idx 12 / joint 2.)
+3. Redémarrer LinuxCNC. Pas d'inversion HAL nécessaire : avec logique drive=1,
+   `din-pot/din-not` valent 1 **uniquement** quand la butée est touchée.
+
+## Homing — encodeur absolu (axe X)
+
+L'encodeur LC10E est **absolu multi-tours + batterie** (P02-01=1) : la position est
+conservée à l'extinction. On exploite ça pour ne **plus refaire le homing à chaque
+démarrage**. Implémenté sur X le 2026-06-21 (mode CSV + `cia402.comp`).
+
+- `LC10E.ini [JOINT_0]` : `HOME_ABSOLUTE_ENCODER = 1`, `HOME_SEARCH_VEL = 0`,
+  `HOME_LATCH_VEL = 0`, `HOME_OFFSET = <calibré>`. → Au démarrage, LinuxCNC se réfère
+  directement à la position absolue du drive, sans mouvement. **Home All devient
+  instantané et ne re-zérote PAS** (il restaure la position calibrée).
+- `LC10E.hal` : pour le mode absolu quotidien, l'ancien câblage homing assisté drive de X
+  est **désactivé** (commenté) — `joint.0.home-sw-in`/`index-enable` non reliés à
+  `cia402.0.stat-homed/home`. Il est **réactivé uniquement en config calibration** (cf.
+  `calib_homing.hal`).
+- Coordonnée machine : `HOME_OFFSET` (mm) dans l'INI pour un zéro non situé au repère ;
+  le drive garde `607Ch=0` (le repère = origine drive).
+
+### Calibration de l'origine — homing interne du drive (rare, ou après mort batterie)
+
+**Méthode retenue (machine ON).** `HOME_ABSOLUTE_ENCODER` (quotidien) et `HOME_USE_INDEX`
+(homing piloté drive) étant exclusifs sur un joint, le `HOME_USE_INDEX` est isolé dans une
+**config dédiée** :
+
+- `LC10E-calib.ini` : copie de `LC10E.ini` où `[JOINT_0]` passe en `HOME_USE_INDEX=TRUE`
+  (+ `HOME_LATCH_VEL≠0`, sans `HOME_ABSOLUTE_ENCODER`) et qui charge `calib_homing.hal`.
+- `calib_homing.hal` : réactive `net x-home-index joint.0.index-enable <=> cia402.0.home`.
+- Bouton **« Home X »** du panneau PyVCP → `halui.joint.0.home` ; LED jaune = homing en
+  cours (`cia402.0.stat-homing`).
+- Drive AU PANNEAU (persiste) : `6098h=1` (réf. fin de course − + Z), `60E6h=0`, `607Ch=0`,
+  `6099h:01/:02` vitesses lentes, `609Ah` accel, `2005h:24` timeout.
+
+Procédure : lancer `linuxcnc LC10E-calib.ini`, F2, **« Home X »** → le drive va tamponner
+la fin de course − + Z et fige l'origine (stockée dans l'encodeur absolu). Quitter,
+relancer `LC10E.ini` (normal) → l'absolu adopte la nouvelle origine. **Ne pas faire
+« Home All »** (Y/Z pas équipés).
+
+⚠️ **À valider sur machine** (d'abord à vide, vitesses lentes) : opmode 6 en mouvement
+(bug CSP) ; conflit possible entre N-OT (overtravel sur DI1) et l'usage de la même fin de
+course comme repère de homing ; sens du homing. `/tmp/linuxcnc.report` si démarrage échoue.
+
+**Repli côté LinuxCNC** : `scripts/calibrate_home.py` (halcmd, stdlib, X/Y/Z) — jog manuel
+sur le repère puis calcule/écrit `HOME_OFFSET` dans l'INI. Ou méthode drive `6098=35`
+(position courante, **sans mouvement**).
+
+⚠️ Vaut pour X uniquement ; Y/Z restent en home immédiat tant qu'ils ne sont pas équipés
+(capteurs −limit + params panneau). `HOME_ABSOLUTE_ENCODER`/`HOME_USE_INDEX` = features
+LinuxCNC 2.9.

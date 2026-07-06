@@ -68,6 +68,16 @@
           <pdoEntry idx="6061" subIdx="00" bitLen="8"  halPin="opmode-display"   halType="s32"/>
           <pdoEntry idx="6064" subIdx="00" bitLen="32" halPin="actual-position"  halType="s32"/>
           <pdoEntry idx="606C" subIdx="00" bitLen="32" halPin="actual-velocity"  halType="s32"/>
+          <!-- 0x60FD DI state : fins de course X lues sur le drive (capteurs NC). -->
+          <!-- bit0=N-OT(-) bit1=P-OT(+) bit2=origine ; bits20-24=DI0..DI4 bruts.  -->
+          <pdoEntry idx="60FD" subIdx="00" bitLen="32" halType="complex">
+            <complexEntry bitLen="1"  halPin="din-not"  halType="bit"/>   <!-- bit0  : N-OT (limite -) -->
+            <complexEntry bitLen="1"  halPin="din-pot"  halType="bit"/>   <!-- bit1  : P-OT (limite +) -->
+            <complexEntry bitLen="1"  halPin="din-home" halType="bit"/>   <!-- bit2  : origine (non cablee) -->
+            <complexEntry bitLen="17"/>                                   <!-- bits 3..19 : padding -->
+            <complexEntry bitLen="1"  halPin="din-di0"  halType="bit"/>   <!-- bit20 : DI0 brut (debug) -->
+            <complexEntry bitLen="1"  halPin="din-di1"  halType="bit"/>   <!-- bit21 : DI1 brut (debug) -->
+          </pdoEntry>
         </pdo>
       </syncManager>
     </slave>
