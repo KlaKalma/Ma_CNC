@@ -34,6 +34,52 @@ aval décalé +1). VID Beckhoff=0x00000002, VID Lichuan=0x00000766.
 
 Voir `docs/beckhoff_io_mapping.md` pour le détail canal par canal.
 
+## Ressources externes & outillage agent
+
+### Compétences Claude Code (`~/.claude/skills/`)
+
+Six compétences couvrent ce projet et se déclenchent automatiquement selon le
+sujet : `ethercat-linuxcnc`, `linuxcnc-config`, `linuxcnc-ihm-pendant`,
+`cnc-securite-interlocks`, `cnc-feeds-speeds`, `cnc-documentation`.
+
+**Règle de répartition à respecter en les modifiant** : les compétences portent
+la **méthode** et les **pièges** (stables) ; ce fichier et `scripts/etat_config.sh`
+portent l'**état** (volatil). Une compétence qui code en dur `FERROR = 500`
+devient fausse sans prévenir — et un document confiant mais périmé est pire
+qu'un document vague.
+
+`cnc-securite-interlocks` fonctionne en **mode mise au point** : il constate et
+annote, il ne bloque pas et ne pose pas de questions de sécurité en série. C'est
+délibéré.
+
+### `scripts/etat_config.sh`
+
+Imprime en un coup l'état courant des réglages volatils : période servo vs
+`appTimePeriod`, limites par axe et par joint, `FERROR`, options de homing,
+gains PID, échelles CiA402, sorties physiques câblées, fins de course remontées,
+topologie EtherCAT déclarée, et `ethercat slaves` si le maître tourne.
+À lancer avant d'affirmer une valeur de configuration.
+
+### Classeur Google Sheets « Choix CNC Pièces »
+
+fileId `1GTBUUSx6CxxF7j1nn2XhbBi3ibsDr3E39K9pSKlwAFU` — accessible via le
+connecteur Google Drive.
+
+Contient ce qui n'est nulle part dans ce dépôt : achats et coûts, nomenclature
+de visserie, **choix de conception argumentés** (châssis, architecture X sur Z /
+Z sur X / C frame, assemblage), comparatif EtherCAT vs step/dir, **paramètres
+VFD FC300 P001→P102**, **paramètres servo LC10E P02→P05**, et ~30 liens de
+ressources.
+
+Lecture : un `read_file_content` direct dépasse la limite de tokens (~62 k
+caractères). Le résultat est écrit dans un JSON `{fileContent: string}` —
+extraire ensuite avec python ou `jq`. L'export est un unique tableau Markdown.
+
+Recoupements utiles : `P02-09/10/11/12` = temporisations de frein servo ;
+`P038`/`P039` = rampes accel/décel VFD, qui conditionnent la temporisation avant
+desserrage d'outil. `LC10E_parameters.csv` est un export de la feuille servo —
+vérifier lequel des deux est le plus récent.
+
 ## Fichiers clés
 
 | Fichier | Rôle |
