@@ -2,11 +2,13 @@
 <!--
   ethercat-io-test.xml — Conf EtherCAT pour TEST I/O Beckhoff uniquement.
 
-  Ne déclare QUE les modules Beckhoff configurés (EL2024 #1, EL2008 #1,
-  EL4002, EL1008 #1). Les drives LC10E (pos 10/11/12) sont VOLONTAIREMENT
-  OMIS → aucune synchro DC requise → le bus monte proprement sans
-  "Synchronization error", parfait pour tester les sorties/entrées.
+  Ne déclare QUE les modules Beckhoff utiles au test (EL2024 #1, EL2008 #1
+  spare, EL2088 commandes VFD, EL4002, EL1008 #1). Les drives LC10E
+  (pos 11/12/13) sont VOLONTAIREMENT OMIS → aucune synchro DC requise → le
+  bus monte proprement sans "Synchronization error", parfait pour tester
+  les sorties/entrées.
 
+  Topologie mise à jour le 2026-07-07 (EL2088 inséré en pos.6, aval +1).
   Les positions (idx) correspondent au rail physique : les slaves non
   déclarés (EL2024 #2/#3, EL2008 #2, EL1008 #2/#3, drives) restent en
   PREOP, sans gêner le test.
@@ -19,9 +21,10 @@
     <!-- pos.0 : EK1100 bus coupler (pas de PDO à déclarer) -->
 
     <slave idx="1" type="EL2024"/>   <!-- Freins X/Y/Z : dout-0..3 -->
-    <slave idx="4" type="EL2008"/>   <!-- Commandes VFD X1-X8 : dout-0..7 -->
-    <slave idx="6" type="EL4002"/>   <!-- Sortie AVI : aout-0/1-* -->
-    <slave idx="7" type="EL1008"/>   <!-- Retours VFD Y1/Y2 : din-0..7 -->
+    <slave idx="4" type="EL2008"/>   <!-- Spare (ancien module VFD) : dout-0..7 -->
+    <slave idx="6" type="EL2088"/>   <!-- Commandes VFD X1-X8 (NPN/ground) : dout-0..7 -->
+    <slave idx="7" type="EL4002"/>   <!-- Sortie AVI : aout-0/1-* -->
+    <slave idx="8" type="EL1008"/>   <!-- Retours VFD Y1/Y2 : din-0..7 -->
 
   </master>
 </masters>

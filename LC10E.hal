@@ -28,34 +28,34 @@ addf cia402.2.write-all     servo-thread
 addf lcec.write-all         servo-thread
 
 # --- EtherCAT ↔ CIA402 ── Axe X (slave 0 / joint 0) ---
-net x-controlword    cia402.0.controlword          => lcec.0.10.cia-controlword
-net x-statusword     lcec.0.10.cia-statusword       => cia402.0.statusword
-net x-drv-act-pos    lcec.0.10.actual-position      => cia402.0.drv-actual-position
-net x-drv-act-vel    lcec.0.10.actual-velocity      => cia402.0.drv-actual-velocity
-net x-opmode         cia402.0.opmode               => lcec.0.10.opmode
-net x-opmode-display lcec.0.10.opmode-display       => cia402.0.opmode-display
-net x-target-vel     cia402.0.drv-target-velocity  => lcec.0.10.target-velocity
-net x-drv-target-pos cia402.0.drv-target-position  => lcec.0.10.target-position
+net x-controlword    cia402.0.controlword          => lcec.0.11.cia-controlword
+net x-statusword     lcec.0.11.cia-statusword       => cia402.0.statusword
+net x-drv-act-pos    lcec.0.11.actual-position      => cia402.0.drv-actual-position
+net x-drv-act-vel    lcec.0.11.actual-velocity      => cia402.0.drv-actual-velocity
+net x-opmode         cia402.0.opmode               => lcec.0.11.opmode
+net x-opmode-display lcec.0.11.opmode-display       => cia402.0.opmode-display
+net x-target-vel     cia402.0.drv-target-velocity  => lcec.0.11.target-velocity
+net x-drv-target-pos cia402.0.drv-target-position  => lcec.0.11.target-position
 
 # --- EtherCAT ↔ CIA402 ── Axe Y (slave 1 / joint 1) ---
-net y-controlword    cia402.1.controlword          => lcec.0.11.cia-controlword
-net y-statusword     lcec.0.11.cia-statusword       => cia402.1.statusword
-net y-drv-act-pos    lcec.0.11.actual-position      => cia402.1.drv-actual-position
-net y-drv-act-vel    lcec.0.11.actual-velocity      => cia402.1.drv-actual-velocity
-net y-opmode         cia402.1.opmode               => lcec.0.11.opmode
-net y-opmode-display lcec.0.11.opmode-display       => cia402.1.opmode-display
-net y-target-vel     cia402.1.drv-target-velocity  => lcec.0.11.target-velocity
-net y-drv-target-pos cia402.1.drv-target-position  => lcec.0.11.target-position
+net y-controlword    cia402.1.controlword          => lcec.0.12.cia-controlword
+net y-statusword     lcec.0.12.cia-statusword       => cia402.1.statusword
+net y-drv-act-pos    lcec.0.12.actual-position      => cia402.1.drv-actual-position
+net y-drv-act-vel    lcec.0.12.actual-velocity      => cia402.1.drv-actual-velocity
+net y-opmode         cia402.1.opmode               => lcec.0.12.opmode
+net y-opmode-display lcec.0.12.opmode-display       => cia402.1.opmode-display
+net y-target-vel     cia402.1.drv-target-velocity  => lcec.0.12.target-velocity
+net y-drv-target-pos cia402.1.drv-target-position  => lcec.0.12.target-position
 
 # --- EtherCAT ↔ CIA402 ── Axe Z (slave 2 / joint 2) ---
-net z-controlword    cia402.2.controlword          => lcec.0.12.cia-controlword
-net z-statusword     lcec.0.12.cia-statusword       => cia402.2.statusword
-net z-drv-act-pos    lcec.0.12.actual-position      => cia402.2.drv-actual-position
-net z-drv-act-vel    lcec.0.12.actual-velocity      => cia402.2.drv-actual-velocity
-net z-opmode         cia402.2.opmode               => lcec.0.12.opmode
-net z-opmode-display lcec.0.12.opmode-display       => cia402.2.opmode-display
-net z-target-vel     cia402.2.drv-target-velocity  => lcec.0.12.target-velocity
-net z-drv-target-pos cia402.2.drv-target-position  => lcec.0.12.target-position
+net z-controlword    cia402.2.controlword          => lcec.0.13.cia-controlword
+net z-statusword     lcec.0.13.cia-statusword       => cia402.2.statusword
+net z-drv-act-pos    lcec.0.13.actual-position      => cia402.2.drv-actual-position
+net z-drv-act-vel    lcec.0.13.actual-velocity      => cia402.2.drv-actual-velocity
+net z-opmode         cia402.2.opmode               => lcec.0.13.opmode
+net z-opmode-display lcec.0.13.opmode-display       => cia402.2.opmode-display
+net z-target-vel     cia402.2.drv-target-velocity  => lcec.0.13.target-velocity
+net z-drv-target-pos cia402.2.drv-target-position  => lcec.0.13.target-position
 
 # --- PID + Enable ── Axe X ---
 net x-enable  joint.0.amp-enable-out => pid.x.enable cia402.0.enable
@@ -65,8 +65,8 @@ net x-vel-cmd pid.x.output           => cia402.0.velocity-cmd
 net x-fault   cia402.0.drv-fault     => joint.0.amp-fault-in
 # --- Fins de course matérielles X (lues sur le drive via 0x60FD, capteurs NO actif-haut) ---
 # Bits de fonction P-OT/N-OT : vrai = limite atteinte (cohérent avec l'overtravel drive)
-net x-pos-lim lcec.0.10.din-pot       => joint.0.pos-lim-sw-in
-net x-neg-lim lcec.0.10.din-not       => joint.0.neg-lim-sw-in
+net x-pos-lim lcec.0.11.din-pot       => joint.0.pos-lim-sw-in
+net x-neg-lim lcec.0.11.din-not       => joint.0.neg-lim-sw-in
 # Homing absolu (HOME_ABSOLUTE_ENCODER=1 dans LC10E.ini) : LinuxCNC se réfère à la
 # position absolue du drive (encodeur multi-tours + batterie), sans switch ni index.
 # On NE câble donc PAS home-sw-in/index-enable (ancien schéma homing assisté drive) :

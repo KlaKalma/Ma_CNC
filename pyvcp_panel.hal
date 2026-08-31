@@ -23,14 +23,15 @@ net y-enable => pyvcp.y-enabled
 net z-enable => pyvcp.z-enabled
 
 # --- Broche VFD ---
-# EL2008 #1 : affichage (dout-N, 0-indexé) — mapping recâblé 2026-06-21
+# EL2088 (slave 6) : affichage (dout-N, 0-indexé) — mapping recâblé 2026-06-21,
+# module déplacé EL2008 pos.4 → EL2088 pos.6 le 2026-07-07
 net spindle-fwd    => pyvcp.el2008-x1
 net spindle-rev    => pyvcp.el2008-x2
 # X3 Stop : bouton PyVCP → dout-2 ET LED
-net spindle-stop-btn pyvcp.spindle-stop-btn => lcec.0.4.dout-2 pyvcp.el2008-x3
+net spindle-stop-btn pyvcp.spindle-stop-btn => lcec.0.6.dout-2 pyvcp.el2008-x3
 # X4 Jog FWD : non connecté → LED grise
 # X5 Reset : bouton PyVCP → dout-4 ET LED
-net spindle-reset-btn pyvcp.spindle-fault-reset => lcec.0.4.dout-4 pyvcp.el2008-x5
+net spindle-reset-btn pyvcp.spindle-fault-reset => lcec.0.6.dout-4 pyvcp.el2008-x5
 # X6 Ext Fault / X7 Multi Speed (non fonct.) / X8 Jog REV (non prés.) : non connectés → LED grise
 
 # EL4002 : affichage vitesse consigne + tension AVI réelle
@@ -58,7 +59,7 @@ net x-pos-lim          => pyvcp.x-limit-max
 net x-is-homed         joint.0.homed          => pyvcp.x-homed
 net x-fault            => pyvcp.x-fault
 net x-warning-status   cia402.0.stat-warning  => pyvcp.x-warning
-net x-state-op         lcec.0.10.slave-state-op => pyvcp.x-state-op
+net x-state-op         lcec.0.11.slave-state-op => pyvcp.x-state-op
 net x-fault-reset-pyvcp pyvcp.x-fault-reset   => cia402.0.fault-reset
 net x-vel-cmd          => scale.rpm-x.in
 setp scale.rpm-x.gain  12.0
@@ -77,7 +78,7 @@ net y-limit-hard-max   halui.joint.1.on-hard-max-limit => pyvcp.y-limit-max
 net y-is-homed         joint.1.homed          => pyvcp.y-homed
 net y-fault            => pyvcp.y-fault
 net y-warning-status   cia402.1.stat-warning  => pyvcp.y-warning
-net y-state-op         lcec.0.11.slave-state-op => pyvcp.y-state-op
+net y-state-op         lcec.0.12.slave-state-op => pyvcp.y-state-op
 net y-fault-reset-pyvcp pyvcp.y-fault-reset   => cia402.1.fault-reset
 net y-vel-cmd          => scale.rpm-y.in
 setp scale.rpm-y.gain  12.0
@@ -96,7 +97,7 @@ net z-limit-hard-max   halui.joint.2.on-hard-max-limit => pyvcp.z-limit-max
 net z-is-homed         joint.2.homed          => pyvcp.z-homed
 net z-fault            => pyvcp.z-fault
 net z-warning-status   cia402.2.stat-warning  => pyvcp.z-warning
-net z-state-op         lcec.0.12.slave-state-op => pyvcp.z-state-op
+net z-state-op         lcec.0.13.slave-state-op => pyvcp.z-state-op
 net z-fault-reset-pyvcp pyvcp.z-fault-reset   => cia402.2.fault-reset
 net z-vel-cmd          => scale.rpm-z.in
 setp scale.rpm-z.gain  12.0

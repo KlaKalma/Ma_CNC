@@ -1,0 +1,23 @@
+# Nom de peripherique stable pour le pendant CNC.
+#   sudo cp 99-pendant.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules && sudo udevadm trigger
+#
+# Sans cette regle, la carte apparait en /dev/ttyACM0, ACM1... selon l'ordre
+# de branchement, ce qui casse pendant.hal.
+#
+# Verifier les identifiants reels une fois la carte branchee :
+#   udevadm info -a -n /dev/ttyACM0 | grep -m2 'idVendor\|idProduct'
+# puis ne garder que la ligne correspondant a TA carte.
+
+# Arduino UNO R4 WiFi  <- carte installee (le port serie est expose par
+# l'ESP32-S3, qui enumere comme "UNO WiFi R4 CMSIS-DAP")
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="1002", SYMLINK+="pendant", MODE="0666"
+
+# Arduino UNO R4 Minima
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="0069", SYMLINK+="pendant", MODE="0666"
+
+# Arduino Leonardo / Pro Micro officiel
+SUBSYSTEM=="tty", ATTRS{idVendor}=="2341", ATTRS{idProduct}=="8036", SYMLINK+="pendant", MODE="0666"
+
+# Pro Micro clone SparkFun (5V/16MHz)
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1b4f", ATTRS{idProduct}=="9206", SYMLINK+="pendant", MODE="0666"

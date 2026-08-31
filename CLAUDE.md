@@ -12,7 +12,8 @@ Machine CNC multi-axes avec LinuxCNC + EtherCAT, actuellement configurée mono-a
 
 ## Topologie EtherCAT complète
 
-Vérifiée avec `ethercat slaves` le 2026-06-17. VID Beckhoff=0x00000002, VID Lichuan=0x00000766.
+Vérifiée avec `ethercat slaves` le 2026-07-07 (après ajout de l'EL2088 en pos.6 →
+aval décalé +1). VID Beckhoff=0x00000002, VID Lichuan=0x00000766.
 
 | Pos | Esclave | PID | HAL préfixe | État |
 |-----|---------|-----|-------------|------|
@@ -20,15 +21,16 @@ Vérifiée avec `ethercat slaves` le 2026-06-17. VID Beckhoff=0x00000002, VID Li
 | 1 | Beckhoff EL2024 #1 | 0x07e83052 | `lcec.0.1.*` | Configuré — Freins X/Y/Z |
 | 2 | Beckhoff EL2024 #2 | 0x07e83052 | `lcec.0.2.*` | À configurer |
 | 3 | Beckhoff EL2024 #3 | 0x07e83052 | `lcec.0.3.*` | À configurer |
-| 4 | Beckhoff EL2008 #1 | 0x07d83052 | `lcec.0.4.*` | Configuré — VFD X1-X8 |
+| 4 | Beckhoff EL2008 #1 | 0x07d83052 | `lcec.0.4.*` | **Spare** (ancien module VFD, PNP) |
 | 5 | Beckhoff EL2008 #2 | 0x07d83052 | `lcec.0.5.*` | À configurer |
-| 6 | Beckhoff EL4002 | 0x0fa23052 | `lcec.0.6.*` | Configuré — AVI vitesse broche |
-| 7 | Beckhoff EL1008 #1 | 0x03f03052 | `lcec.0.7.*` | Configuré — VFD Y1(Fault)/Y2(Run) |
-| 8 | Beckhoff EL1008 #2 | 0x03f03052 | `lcec.0.8.*` | À configurer — Sécurités |
-| 9 | Beckhoff EL1008 #3 | 0x03f03052 | `lcec.0.9.*` | À configurer — Palpeur/outil |
-| 10 | Lichuan LC10E X | 0x00000402 | `lcec.0.10.*` | Configuré — Joint 0 |
-| 11 | Lichuan LC10E Y | 0x00000402 | `lcec.0.11.*` | Configuré — Joint 1 |
-| 12 | Lichuan LC10E Z | 0x00000402 | `lcec.0.12.*` | Configuré — Joint 2 |
+| 6 | Beckhoff **EL2088** | 0x08283052 | `lcec.0.6.*` | Configuré — **VFD X1-X8 (NPN/ground)** |
+| 7 | Beckhoff EL4002 | 0x0fa23052 | `lcec.0.7.*` | Configuré — AVI vitesse broche |
+| 8 | Beckhoff EL1008 #1 | 0x03f03052 | `lcec.0.8.*` | Configuré — VFD Y1(Fault)/Y2(Run) |
+| 9 | Beckhoff EL1008 #2 | 0x03f03052 | `lcec.0.9.*` | À configurer — Sécurités |
+| 10 | Beckhoff EL1008 #3 | 0x03f03052 | `lcec.0.10.*` | À configurer — Palpeur/outil |
+| 11 | Lichuan LC10E X | 0x00000402 | `lcec.0.11.*` | Configuré — Joint 0 |
+| 12 | Lichuan LC10E Y | 0x00000402 | `lcec.0.12.*` | Configuré — Joint 1 |
+| 13 | Lichuan LC10E Z | 0x00000402 | `lcec.0.13.*` | Configuré — Joint 2 |
 
 Voir `docs/beckhoff_io_mapping.md` pour le détail canal par canal.
 
@@ -39,7 +41,7 @@ Voir `docs/beckhoff_io_mapping.md` pour le détail canal par canal.
 | `LC10E.ini` | Config principale (axes, période servo 1ms, display AXIS) |
 | `LC10E.hal` | HAL principal : chargement composants, routage signaux |
 | `pid_tuning.hal` | Gains PID auto-optimisés — ne pas éditer à la main |
-| `spindle.hal` | Contrôle broche VFD : EL2008 #1 (pos 7) + EL4002 (pos 9) + EL1008 #3 (pos 12) |
+| `spindle.hal` | Contrôle broche VFD : EL2088 (pos 6) + EL4002 (pos 7) + EL1008 #1 (pos 8) |
 | `ethercat-conf.xml` | Topologie EtherCAT + mapping PDO pour tous les slaves actifs |
 | `cia402.comp` | Composant HAL machine d'état CIA402 |
 | `pyvcp_panel.xml` | Interface PyVCP gauche d'AXIS |
@@ -49,12 +51,12 @@ Voir `docs/beckhoff_io_mapping.md` pour le détail canal par canal.
 
 ## Période EtherCAT / servo : 1 ms (NE PAS repasser à 500 µs)
 
-Symptôme si trop rapide : les servos Y/Z (slaves 11, 12, fin de chaîne) s'arrêtent
+Symptôme si trop rapide : les servos Y/Z (slaves 12, 13, fin de chaîne) s'arrêtent
 en plein G-code **sans erreur LinuxCNC**, et le jog remarche après. Cause : perte de
 synchro DC (flag `E` sur `ethercat slaves`, `Failed to receive DC sync check datagram`
-dans dmesg sur 0-11/0-12, datagrammes `UNMATCHED`/`SKIPPED`).
+dans dmesg sur 0-12/0-13, datagrammes `UNMATCHED`/`SKIPPED`).
 
-Le commit `2fd9ec8` tournait à 500 µs **mais avec 2 esclaves seulement**. Avec 13
+Le commit `2fd9ec8` tournait à 500 µs **mais avec 2 esclaves seulement**. Avec 14
 esclaves + 3 drives DC, le master du Pi ne tient plus le cycle 500 µs. Toutes les
 configs de référence (forum Lichuan, omrg5, el8_original 4-servos, generic-complex)
 tournent à **1 ms**. Deux valeurs à garder synchronisées :
@@ -127,7 +129,8 @@ Chercher le paramètre "Speed/Frequency Ratio" ou "Motor Rated Speed/Frequency" 
 
 ## VFD Broche — câblage Beckhoff
 
-**Commandes** EL2008 #1 (pos 4, `lcec.0.4.*`) → bornes X du VFD (dout-N, 0-indexé).
+**Commandes** EL2088 (pos 6, `lcec.0.6.*`) → bornes X du VFD (dout-N, 0-indexé).
+Module NPN/ground installé le 2026-07-07 (voir section NPN vs PNP ci-dessous).
 Mapping recâblé le 2026-06-21 (paramètres VFD P91-P98) :
 - dout-0 → X1 Forward      (P91) → `spindle.0.forward`
 - dout-1 → X2 Reverse      (P92) → `spindle.0.reverse`
@@ -142,13 +145,13 @@ Mapping recâblé le 2026-06-21 (paramètres VFD P91-P98) :
 (la broche tourne quand X1 ou X2 est actif). L'ancien `spindle.0.on → dout-6` a été
 retiré car il déclenchait X7 (multi-speed) en erreur à chaque M3.
 
-**Retours** VFD → EL1008 #1 (pos 7, `lcec.0.7.*`) :
+**Retours** VFD → EL1008 #1 (pos 8, `lcec.0.8.*`) :
 - din-0 ← Y1 Fault
 - din-1 ← Y2 Run
 
-**Référence analogique** EL4002 (pos 6, `lcec.0.6.*`) :
+**Référence analogique** EL4002 (pos 7, `lcec.0.7.*`) :
 - aout-0-value → VFD AVI (float RPM, 0-10V via scale=18000)  ← 18000 RPM = 10V = 1200 Hz
-- aout-1-value → Référence fixe 100% (`setp lcec.0.6.aout-1-value 1.0`)
+- aout-1-value → Référence fixe 100% (`setp lcec.0.7.aout-1-value 1.0`)
 
 ## ⚠️ CRITIQUE — NPN vs PNP : entrées VFD ↔ sorties Beckhoff
 
@@ -163,20 +166,24 @@ Donc elle ne peut **pas** activer une entrée NPN. Symptôme : envoyer +24V sur 
 fait rien ; relier X1↔COM (0V) à la main démarre la broche. **Aucune inversion HAL ne
 corrige ça — c'est physique.**
 
-**Solution : remplacer l'EL2008 (pos 4) par un EL2088.**
+**Solution appliquée le 2026-07-07 : EL2088 installé en pos.6 (`lcec.0.6.*`).**
 
-| | EL2008 (actuel) | **EL2088** (à mettre) |
+Le module a été **ajouté** au rail (pas substitué à l'EL2008) → l'EL2008 pos.4 reste en
+place comme spare PNP, et tous les slaves en aval (EL4002, EL1008, drives LC10E X/Y/Z)
+ont **décalé de +1** : EL4002 6→7, EL1008 7→8, drives 10/11/12 → **11/12/13**. Le VFD a
+été recâblé sur l'EL2088 avec le même mapping de canaux qu'avant (dout-0=Forward, etc.).
+
+| | EL2008 (pos.4, spare) | **EL2088 (pos.6, VFD)** |
 |---|---|---|
 | Type | sourcing / PNP (+24V) | **ground switching / NPN (0V)** |
 | Canaux / I / U | 8 / 0.5A / 24V | 8 / 0.5A / 24V |
-| Pins lcec | `dout-0..7` | `dout-0..7` (identiques) |
+| Pins lcec | `lcec.0.4.dout-0..7` | `lcec.0.6.dout-0..7` |
 
-- **Drop-in total** : supporté par lcec (`type="EL2088"`, PID 0x08283052). Seul
-  changement : `type="EL2008"` → `type="EL2088"` dans `ethercat-conf.xml` pos 4.
-  **Zéro changement HAL** (logique `dout-N ON = fonction active` conservée — l'EL2088
-  inverse l'électrique : ON = tire à 0V = active l'entrée NPN).
-- Câblage : `dout-N` → X_n du VFD, et **0V de l'EL2088 relié au COM du VFD**.
-- Stopgap sans EL2088 : carte relais (EL2008 → bobine → contact NO entre X_n et COM).
+- **Support lcec** : `type="EL2088"` (natif, PID 0x08283052), déclaré dans
+  `ethercat-conf.xml` pos.6. **Zéro inversion HAL** (logique `dout-N ON = fonction
+  active` conservée — l'EL2088 inverse l'électrique : ON = tire à 0V = active l'entrée NPN).
+- ⚠️ **Câblage obligatoire** : `dout-N` → X_n du VFD, et **0V de l'EL2088 relié au COM
+  du VFD** (sinon le retour de courant NPN n'a pas de chemin → rien ne s'active).
 
 **Règle générale — quel module pour quoi :**
 - **Sorties vers entrées NPN d'un VFD/appareil** (FC300 X1-X8) → **EL2088** (ground/NPN).
@@ -199,7 +206,7 @@ corrige ça — c'est physique.**
 
 Capteurs de proximité **PNP 3 fils** (brun=+24V, bleu=0V, noir=signal), un à chaque
 extrémité de course, **câblés sur le connecteur de contrôle CN2 du drive** concerné.
-Implémenté et validé sur X (slave idx 10) le 2026-06-21 ; recette identique pour Y/Z.
+Implémenté et validé sur X (slave idx 11) le 2026-06-21 ; recette identique pour Y/Z.
 
 ### Câblage CN2 (par drive)
 
@@ -236,13 +243,13 @@ Bits : `bit0`=N-OT, `bit1`=P-OT, `bit2`=origine ; `bits20..24`=DI0..DI4 bruts.
 
 1. `ethercat-conf.xml` — dans le TxPDO `<pdo idx="1a00">` du slave, ajouter une
    `pdoEntry idx="60FD" halType="complex"` avec des `complexEntry` (cf. le bloc du
-   slave idx 10). Crée les pins `lcec.0.<idx>.din-{not,pot,home,di0,di1}`.
+   slave idx 11). Crée les pins `lcec.0.<idx>.din-{not,pot,home,di0,di1}`.
 2. `LC10E.hal` — relier les bits de fonction aux limites du joint :
    ```
    net <axe>-pos-lim lcec.0.<idx>.din-pot => joint.<n>.pos-lim-sw-in
    net <axe>-neg-lim lcec.0.<idx>.din-not => joint.<n>.neg-lim-sw-in
    ```
-   (X : idx 10 / joint 0 — fait. Y : idx 11 / joint 1. Z : idx 12 / joint 2.)
+   (X : idx 11 / joint 0 — fait. Y : idx 12 / joint 1. Z : idx 13 / joint 2.)
 3. Redémarrer LinuxCNC. Pas d'inversion HAL nécessaire : avec logique drive=1,
    `din-pot/din-not` valent 1 **uniquement** quand la butée est touchée.
 

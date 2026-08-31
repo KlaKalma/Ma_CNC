@@ -1,0 +1,63 @@
+# pendant-postgui.hal -- la console Axis pilote le pendant
+#
+# Charge en POSTGUI dans LC10E.ini :
+#     POSTGUI_HALFILE = pendant/pendant-postgui.hal
+#
+# Les pins `axisui.*` sont creees par le GUI Axis : elles n'existent PAS au
+# moment ou les HALFILE normaux sont lus. D'ou ce fichier separe.
+#
+#   axisui.jog.x / .y / .z    axe selectionne dans le panneau Manual d'Axis
+#   axisui.jog.increment      increment choisi dans la liste deroulante, en
+#                             unites machine (mm). Vaut 0 en mode "Continuous".
+
+loadrt and2 names=and2.pend-x,and2.pend-y,and2.pend-z
+loadrt comp names=comp.pend-inc
+loadrt mux2 names=mux2.pend-scale
+
+addf and2.pend-x     servo-thread
+addf and2.pend-y     servo-thread
+addf and2.pend-z     servo-thread
+addf comp.pend-inc   servo-thread
+addf mux2.pend-scale servo-thread
+
+# ---------------------------------------------------------------------
+# Autorisation de jog = axe selectionne dans la console ET liaison vivante.
+# Un seul bouton d'axe peut etre actif a la fois dans Axis, donc un seul
+# jog-enable monte : pas besoin d'arbitrage supplementaire.
+# ---------------------------------------------------------------------
+net pendant-online => and2.pend-x.in0
+net pendant-online => and2.pend-y.in0
+net pendant-online => and2.pend-z.in0
+
+net pendant-sel-x <= axisui.jog.x => and2.pend-x.in1
+net pendant-sel-y <= axisui.jog.y => and2.pend-y.in1
+net pendant-sel-z <= axisui.jog.z => and2.pend-z.in1
+
+net pendant-en-x <= and2.pend-x.out => axis.x.jog-enable joint.0.jog-enable
+net pendant-en-y <= and2.pend-y.out => axis.y.jog-enable joint.1.jog-enable
+net pendant-en-z <= and2.pend-z.out => axis.z.jog-enable joint.2.jog-enable
+
+# ---------------------------------------------------------------------
+# Increment par cran = celui choisi dans la console.
+#
+# Piege : en mode "Continuous", axisui.jog.increment vaut 0. Branche tel quel,
+# jog-scale tomberait a 0 et la molette n'aurait plus AUCUN effet, sans erreur
+# ni message. On bascule donc sur une valeur de repli quand l'increment est nul.
+# ---------------------------------------------------------------------
+setp comp.pend-inc.in0 0.0000001
+net pendant-jog-inc <= axisui.jog.increment
+net pendant-jog-inc => comp.pend-inc.in1
+net pendant-jog-inc => mux2.pend-scale.in1
+
+net pendant-inc-valid <= comp.pend-inc.out => mux2.pend-scale.sel
+
+# Repli quand la console est en "Continuous"
+setp mux2.pend-scale.in0 0.100
+
+net pendant-jog-scale <= mux2.pend-scale.out
+net pendant-jog-scale => axis.x.jog-scale
+net pendant-jog-scale => axis.y.jog-scale
+net pendant-jog-scale => axis.z.jog-scale
+net pendant-jog-scale => joint.0.jog-scale
+net pendant-jog-scale => joint.1.jog-scale
+net pendant-jog-scale => joint.2.jog-scale

@@ -4,19 +4,23 @@
   dcConf (DC sync) : UNIQUEMENT pour les drives LC10E
   Modules EL Beckhoff : types natifs, pas de dcConf, pas de configPdos
 
+  Topologie mise à jour le 2026-07-07 : EL2088 inséré en pos.6 → tous les
+  slaves en aval décalés de +1 (EL4002, EL1008, et les 3 drives LC10E).
+
   Pos 0  : EK1100  Bus coupler           (pas de config PDO)
   Pos 1  : EL2024 #1  → type="EL2024"   pins : lcec.0.1.dout-0..3
   Pos 2  : EL2024 #2  (à configurer)
   Pos 3  : EL2024 #3  (à configurer)
-  Pos 4  : EL2008 #1  → type="EL2008"   pins : lcec.0.4.dout-0..7
+  Pos 4  : EL2008 #1  → type="EL2008"   pins : lcec.0.4.dout-0..7  (SPARE — VFD déplacé sur EL2088)
   Pos 5  : EL2008 #2  (à configurer)
-  Pos 6  : EL4002     → type="EL4002"   pins : lcec.0.6.aout-0/1-{value,enable,scale,...}
-  Pos 7  : EL1008 #1  → type="EL1008"   pins : lcec.0.7.din-0..7
-  Pos 8  : EL1008 #2  (à configurer)
-  Pos 9  : EL1008 #3  (à configurer)
-  Pos 10 : LC10E X    CIA402 CSV          Joint 0
-  Pos 11 : LC10E Y    CIA402 CSV          Joint 1
-  Pos 12 : LC10E Z    CIA402 CSV          Joint 2
+  Pos 6  : EL2088     → type="EL2088"   pins : lcec.0.6.dout-0..7  (NPN/ground — commandes VFD X1-X8)
+  Pos 7  : EL4002     → type="EL4002"   pins : lcec.0.7.aout-0/1-{value,enable,scale,...}
+  Pos 8  : EL1008 #1  → type="EL1008"   pins : lcec.0.8.din-0..7
+  Pos 9  : EL1008 #2  (à configurer)
+  Pos 10 : EL1008 #3  (à configurer)
+  Pos 11 : LC10E X    CIA402 CSV          Joint 0
+  Pos 12 : LC10E Y    CIA402 CSV          Joint 1
+  Pos 13 : LC10E Z    CIA402 CSV          Joint 2
 -->
 <masters>
   <master idx="0" appTimePeriod="1000000" refClockSyncCycles="5">
@@ -29,30 +33,37 @@
     <!-- pos.2 : EL2024 #2  (à configurer) -->
     <!-- pos.3 : EL2024 #3  (à configurer) -->
 
-    <!-- ── EL2008 #1 — pos.4 — Commandes VFD X1-X8 ──────────────── -->
-    <!-- ⚠️ NPN/PNP : le VFD FC300 a des entrées NPN (actives à 0V).      -->
-    <!-- L'EL2008 est sourcing/PNP (+24V) → INCOMPATIBLE, n'active pas    -->
-    <!-- les entrées. Remplacer par un EL2088 (ground switching/NPN,      -->
-    <!-- drop-in, mêmes pins dout-0..7) : passer type="EL2088" ici.       -->
-    <!-- Voir CLAUDE.md section "NPN vs PNP". Tant que le module physique -->
-    <!-- est un EL2008, garder type="EL2008".                            -->
+    <!-- ── EL2008 #1 — pos.4 — SPARE (ancien module VFD) ────────── -->
+    <!-- Les commandes VFD ont été déplacées sur l'EL2088 (pos.6) le      -->
+    <!-- 2026-07-07 : les entrées NPN du FC300 (actives à 0V) sont        -->
+    <!-- incompatibles avec l'EL2008 sourcing/PNP (+24V). Ce module reste -->
+    <!-- disponible comme 8 sorties PNP libres : lcec.0.4.dout-0..7.      -->
     <slave idx="4" type="EL2008"/>
 
     <!-- pos.5 : EL2008 #2  (à configurer) -->
 
-    <!-- ── EL4002 — pos.6 — Consigne vitesse AVI ─────────────────── -->
+    <!-- ── EL2088 — pos.6 — Commandes VFD X1-X8 (NPN/ground) ─────── -->
+    <!-- Installé le 2026-07-07. Ground switching / NPN : dout-N ON tire  -->
+    <!-- la borne à 0V → active l'entrée NPN X_n du VFD FC300. Drop-in    -->
+    <!-- électrique de l'EL2008 : mêmes pins lcec.0.6.dout-0..7, AUCUNE   -->
+    <!-- inversion HAL (logique dout ON = fonction active).               -->
+    <!-- ⚠️ Câblage requis : 0V de l'EL2088 relié au COM du VFD.          -->
+    <!-- Voir CLAUDE.md section "NPN vs PNP".                             -->
+    <slave idx="6" type="EL2088"/>
+
+    <!-- ── EL4002 — pos.7 — Consigne vitesse AVI ─────────────────── -->
     <!-- aout-N-value : float [-1..1] × scale → tension sortie ±10V  -->
     <!-- aout-N-scale : défaut 1.0  (value=1.0 → +10V)               -->
-    <slave idx="6" type="EL4002"/>
+    <slave idx="7" type="EL4002"/>
 
-    <!-- ── EL1008 #1 — pos.7 — Retours VFD Y1/Y2 ────────────────── -->
-    <slave idx="7" type="EL1008"/>
+    <!-- ── EL1008 #1 — pos.8 — Retours VFD Y1/Y2 ────────────────── -->
+    <slave idx="8" type="EL1008"/>
 
-    <!-- pos.8 : EL1008 #2  (à configurer — sécurités) -->
-    <!-- pos.9 : EL1008 #3  (à configurer) -->
+    <!-- pos.9  : EL1008 #2  (à configurer — sécurités) -->
+    <!-- pos.10 : EL1008 #3  (à configurer) -->
 
-    <!-- ── LC10E X — pos.10 — Joint 0 ───────────────────────────── -->
-    <slave idx="10" type="generic" vid="00000766" pid="00000402" configPdos="true">
+    <!-- ── LC10E X — pos.11 — Joint 0 ───────────────────────────── -->
+    <slave idx="11" type="generic" vid="00000766" pid="00000402" configPdos="true">
       <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
@@ -82,8 +93,8 @@
       </syncManager>
     </slave>
 
-    <!-- ── LC10E Y — pos.11 — Joint 1 ───────────────────────────── -->
-    <slave idx="11" type="generic" vid="00000766" pid="00000402" configPdos="true">
+    <!-- ── LC10E Y — pos.12 — Joint 1 ───────────────────────────── -->
+    <slave idx="12" type="generic" vid="00000766" pid="00000402" configPdos="true">
       <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">
@@ -103,8 +114,8 @@
       </syncManager>
     </slave>
 
-    <!-- ── LC10E Z — pos.12 — Joint 2 ───────────────────────────── -->
-    <slave idx="12" type="generic" vid="00000766" pid="00000402" configPdos="true">
+    <!-- ── LC10E Z — pos.13 — Joint 2 ───────────────────────────── -->
+    <slave idx="13" type="generic" vid="00000766" pid="00000402" configPdos="true">
       <dcConf assignActivate="300" sync0Cycle="*1" sync0Shift="0"/>
       <syncManager idx="2" dir="out">
         <pdo idx="1600">

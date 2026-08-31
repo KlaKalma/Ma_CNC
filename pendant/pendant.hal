@@ -1,0 +1,55 @@
+# pendant.hal -- raccordement du pendant USB (encodeur MPG)
+#
+# Charge en HALFILE dans LC10E.ini (section [HAL]) :
+#     HALFILE = pendant/pendant.hal
+#     POSTGUI_HALFILE = pendant/pendant-postgui.hal
+#
+# Ce fichier ne fait que le cablage independant du GUI : chargement du
+# composant et distribution du compteur de crans. La SELECTION de l'axe et
+# l'INCREMENT viennent de la console Axis, donc de pins `axisui.*` qui
+# n'existent qu'apres le demarrage du GUI -> voir pendant-postgui.hal.
+#
+# Cablage sur DEUX jeux de pins, volontairement :
+#   axis.<L>.jog-*   mode monde (teleop) -- exige la machine referencee
+#   joint.N.jog-*    mode joint          -- disponible avant referencement
+# LinuxCNC n'ecoute que le jeu correspondant au mode courant, donc les deux
+# peuvent rester connectes en permanence. Sans ca, la molette ne ferait rien
+# tant que la machine n'a pas fait son Home All.
+
+# -Wn <nom> et non -W : -W attendrait un composant portant le nom de
+# l'executable ("pendant-hal.py"), qui n'existe pas -- le composant s'enregistre
+# sous le nom "pendant". L'attente ne se terminerait jamais et TOUT le reste de
+# ce fichier serait silencieusement ignore (pins jog non connectees, demarrage
+# de LinuxCNC bloque avant milltask), sans le moindre message d'erreur.
+loadusr -Wn pendant ./pendant/pendant-hal.py --device /dev/pendant
+
+# ---------------------------------------------------------------------
+# jog-vel-mode 0 = increment strict (deplacement exact par cran)
+#              1 = la molette pilote une vitesse
+# L'echelle (jog-scale) est pilotee depuis la console, cf. postgui.
+# ---------------------------------------------------------------------
+setp axis.x.jog-vel-mode 0
+setp axis.y.jog-vel-mode 0
+setp axis.z.jog-vel-mode 0
+setp joint.0.jog-vel-mode 0
+setp joint.1.jog-vel-mode 0
+setp joint.2.jog-vel-mode 0
+
+# ---------------------------------------------------------------------
+# Compteur de crans -> tous les axes. Seul celui dont jog-enable est vrai
+# bouge ; l'autorisation est donnee dans pendant-postgui.hal.
+# ---------------------------------------------------------------------
+net pendant-counts <= pendant.counts
+net pendant-counts => axis.x.jog-counts
+net pendant-counts => axis.y.jog-counts
+net pendant-counts => axis.z.jog-counts
+net pendant-counts => joint.0.jog-counts
+net pendant-counts => joint.1.jog-counts
+net pendant-counts => joint.2.jog-counts
+
+# Watchdog de liaison : retombe si le cable est arrache ou la carte muette
+# plus de 0.5 s. Consomme dans pendant-postgui.hal.
+net pendant-online <= pendant.online
+
+# Rappel securite : l'E-stop reste cable sur EtherCAT. Rien de la chaine
+# USB n'intervient dans l'arret d'urgence.
