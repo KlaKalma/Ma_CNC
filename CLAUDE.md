@@ -36,11 +36,14 @@ Voir `docs/beckhoff_io_mapping.md` pour le détail canal par canal.
 
 ## Ressources externes & outillage agent
 
-### Compétences Claude Code (`~/.claude/skills/`)
+### Compétences Claude Code (`.claude/skills/`, dans ce dépôt)
 
-Six compétences couvrent ce projet et se déclenchent automatiquement selon le
-sujet : `ethercat-linuxcnc`, `linuxcnc-config`, `linuxcnc-ihm-pendant`,
-`cnc-securite-interlocks`, `cnc-feeds-speeds`, `cnc-documentation`.
+Scopées au projet, pas en portée personnelle : leur contenu (topologie EtherCAT
+exacte, modèle de VFD, invariants liés à ce système de serrage précis) n'a
+aucune utilité sur un autre projet. Elles se déclenchent automatiquement dès que
+tu travailles dans cet arbre, selon le sujet : `ethercat-linuxcnc`,
+`linuxcnc-config`, `linuxcnc-ihm-pendant`, `cnc-securite-interlocks`,
+`cnc-feeds-speeds`, `cnc-documentation`.
 
 **Règle de répartition à respecter en les modifiant** : les compétences portent
 la **méthode** et les **pièges** (stables) ; ce fichier et `scripts/etat_config.sh`
