@@ -42,6 +42,72 @@ void __USBStart();
 #endif
 #include "FspTimer.h"
 #include "cogging.h"
+#include "Arduino_LED_Matrix.h"
+/* police 3x5 pour la matrice 12x8 de la R4 WiFi : jusqu'a 3 caracteres */
+static const char POLICE_CARS[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789- ";
+static const uint8_t POLICE[][5] = {
+  {2,5,7,5,5},
+  {6,5,6,5,6},
+  {3,4,4,4,3},
+  {6,5,5,5,6},
+  {7,4,6,4,7},
+  {7,4,6,4,4},
+  {3,4,5,5,3},
+  {5,5,7,5,5},
+  {7,2,2,2,7},
+  {1,1,1,5,2},
+  {5,5,6,5,5},
+  {4,4,4,4,7},
+  {5,7,7,5,5},
+  {6,5,5,5,5},
+  {2,5,5,5,2},
+  {6,5,6,4,4},
+  {2,5,5,6,3},
+  {6,5,6,5,5},
+  {3,4,2,1,6},
+  {7,2,2,2,2},
+  {5,5,5,5,7},
+  {5,5,5,5,2},
+  {5,5,7,7,5},
+  {5,5,2,5,5},
+  {5,5,2,2,2},
+  {7,1,2,4,7},
+  {7,5,5,5,7},
+  {2,6,2,2,7},
+  {6,1,2,4,7},
+  {6,1,2,1,6},
+  {5,5,7,1,1},
+  {7,4,6,1,6},
+  {3,4,7,5,7},
+  {7,1,2,2,2},
+  {7,5,7,5,7},
+  {7,5,7,1,6},
+  {0,0,7,0,0},
+  {0,0,0,0,0}
+};
+static ArduinoLEDMatrix matrice;
+static char affTexte[4] = "B";
+
+/* AFFICHAGE : jusqu'a 3 caracteres centres sur la matrice 12x8. Appele
+ * HORS de la boucle temps reel (au changement seulement) : renderBitmap ne
+ * fait que charger un tampon, le balayage tourne sous interruption. */
+static void affiche(const char* t)
+{
+  uint8_t img[8][12] = {{0}};
+  uint8_t n = 0;
+  while (n < 3 && t[n]) n++;
+  int x = (12 - (4 * n - 1)) / 2;
+  for (uint8_t k = 0; k < n; k++, x += 4) {
+    char c = t[k]; if (c >= 'a' && c <= 'z') c -= 32;
+    const char* p = strchr(POLICE_CARS, c);
+    if (!p) continue;
+    const uint8_t* g = POLICE[p - POLICE_CARS];
+    for (uint8_t r = 0; r < 5; r++)
+      for (uint8_t col = 0; col < 3; col++)
+        if (g[r] & (4 >> col)) img[1 + r][x + col] = 1;
+  }
+  matrice.renderBitmap(img, 8, 12);
+}
 #include "boot.h"
 #include "r_wdt.h"
 static uint32_t tramesPerdues = 0;
@@ -123,7 +189,7 @@ enum {
   P_IT, P_IA, P_IF, P_F1, P_F2, P_IDUR, P_IHOLD,
   P_W, P_DZ, P_SNAP, P_KD, P_NBC, P_KMUR, P_VZ,
   P_I2C, P_RBIT, P_CIBLE, P_LIEN, P_VTEST,
-  P_S1N, P_S1M, P_S2N, P_S2M, P_COG, P_KH, NPAR
+  P_S1N, P_S1M, P_S2N, P_S2M, P_COG, P_KH, P_CLIC, P_CLICMS, NPAR
 };
 static Par par[NPAR] = {
   {"mode", 6},     /* DEMARRAGE en mode 6 : loi de crans B (e12), sans PC.
@@ -181,6 +247,11 @@ static Par par[NPAR] = {
                     * loi de crans (mode 6) + un ressort kh dont la consigne
                     * avance a vr vers 'cible' : on traverse les crans comme
                     * une main, sans main. */
+  {"clic", 0},     /* modes 6/7 : impulsion au passage d'un cran, V. Biphasique :
+                    * +clic dans le sens du passage puis -clic, d'ou un "tic"
+                    * sans elan net. Anticipation pure : hors de la boucle,
+                    * aucun effet sur la stabilite. 0 = pas d'impulsion. */
+  {"clicms", 1.0f},/* duree de CHAQUE phase de l'impulsion, ms */
 };
 #define PV(i) par[i].val
 
@@ -255,6 +326,8 @@ static uint8_t  nRejet = 0, nErr = 0;
 static int32_t  zeroAcc = 0;        /* zero du ressort / des crans */
 static float    consigne = 0;       /* mode 5, rad depuis le zero */
 static int32_t  cran = 0;           /* mode 6, indice du cran */
+static int16_t  clicN = 0;          /* echantillons restants de l'impulsion */
+static int8_t   clicSens = 0;
 static uint32_t nInj = 0;           /* echantillons depuis 'go' */
 static float    phInj = 0;
 static uint16_t lfsr = 0xACE1;
@@ -354,8 +427,10 @@ static float loiCrans(float rel, float v, uint8_t& fl)
   int32_t cMin = -(nb / 2), cMax = cMin + nb - 1;
 
   float e = rel - cran * w;
-  if (e > bascule && (nb == 0 || cran < cMax)) { cran++; fl |= 0x80; }
-  else if (e < -bascule && (nb == 0 || cran > cMin)) { cran--; fl |= 0x80; }
+  if (e > bascule && (nb == 0 || cran < cMax)) { cran++; fl |= 0x80; clicSens = 1; }
+  else if (e < -bascule && (nb == 0 || cran > cMin)) { cran--; fl |= 0x80; clicSens = -1; }
+  if ((fl & 0x80) && PV(P_CLIC) > 0)
+    clicN = (int16_t)(2.0f * PV(P_CLICMS) * 1e-3f / (PV(P_PER) * 1e-6f) + 0.5f);
   e = rel - cran * w;
 
   float u;
@@ -441,6 +516,12 @@ static void execute(char* l)
     txt.envoie();
     for (uint8_t i = 0; i < NSEC; i++) secSom[i] = secMax[i] = 0;
     secN = 0;
+    return;
+  }
+  if (!strncmp(l, "aff ", 4)) {
+    strncpy(affTexte, l + 4, 3); affTexte[3] = 0;
+    affiche(affTexte);
+    txt.print(F("#= aff ")); txt.print(affTexte); txt.envoie();
     return;
   }
   if (!strcmp(l, "z"))  { zero(); txt.print(F("# zero")); txt.envoie(); return; }
@@ -537,6 +618,8 @@ void setup()
   acc = raw14Prec;
   for (uint8_t i = 0; i < NH; i++) { histAcc[i] = acc; histT[i] = micros(); }
   zero();
+  matrice.begin();
+  affiche(affTexte);
   txt.print(F("# knob_lab pret")); txt.envoie();
 #if USB_NATIF
   {
@@ -660,6 +743,12 @@ void loop()
         consigne += (e > pas) ? pas : (e < -pas) ? -pas : e;
       }
       u = loiCrans(rel, vitF, fl) + PV(P_KH) * (consigne - rel) + inj; break;
+  }
+  if (clicN > 0 && mode >= 6) {
+    /* premiere moitie : dans le sens du passage ; seconde : a l'inverse */
+    int16_t moitie = (int16_t)(PV(P_CLICMS) * 1e-3f / (PV(P_PER) * 1e-6f) + 0.5f);
+    u += (clicN > moitie ? 1 : -1) * clicSens * PV(P_CLIC);
+    clicN--;
   }
   if (PV(P_COG) != 0 && (mode == 2 || mode >= 5))
     u -= PV(P_COG) * cogging(raw14);
