@@ -115,7 +115,12 @@ class Lab:
     def cmd(self, line, attente=0.3, motif=None):
         with self.lock:
             self.txt.clear()
-        self.s.write((line + '\n').encode())
+        # octet par octet : la reception UART de la R4 a 2 Mbaud n'a pas de
+        # FIFO et perd un caractere des qu'une interruption tarde de 5 us
+        for c in (line + '\n').encode():
+            self.s.write(bytes([c]))
+            self.s.flush()
+            time.sleep(0.0003)
         t0 = time.time()
         while time.time() - t0 < attente:
             with self.lock:
@@ -128,8 +133,11 @@ class Lab:
     def set(self, **kw):
         for k, v in kw.items():
             k = 'if' if k == 'if_' else k
-            r = self.cmd(f'{k} {v}', motif=f'#= {k} ')
-            if not any(t.startswith(f'#= {k} ') for t in r):
+            for essai in range(4):
+                r = self.cmd(f'{k} {v}', motif=f'#= {k} ')
+                if any(t.startswith(f'#= {k} ') for t in r):
+                    break
+            else:
                 raise RuntimeError(f'pas d accuse pour {k}={v}: {r}')
 
     def params(self):

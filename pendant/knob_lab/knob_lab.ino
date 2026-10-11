@@ -40,7 +40,8 @@ enum {
   P_UQ, P_ANG, P_MAG, P_DLT,
   P_K, P_D, P_NV, P_TAU, P_THR, P_UMAX, P_SENS, P_ZEA, P_VMAX, P_VR,
   P_IT, P_IA, P_IF, P_F1, P_F2, P_IDUR, P_IHOLD,
-  P_W, P_DZ, P_SNAP, P_KD, P_NBC, P_KMUR, P_VZ, NPAR
+  P_W, P_DZ, P_SNAP, P_KD, P_NBC, P_KMUR, P_VZ,
+  P_I2C, P_RBIT, P_CIBLE, NPAR
 };
 static Par par[NPAR] = {
   {"mode", 0},     /* 0 pont coupe  1 Uq=0  2 couple  3 vecteur fixe
@@ -77,6 +78,11 @@ static Par par[NPAR] = {
   {"nbc", 0},      /* mode 6 : nombre de crans (0 = infini) */
   {"kmur", 0},     /* mode 6 : raideur du mur hors plage, V/rad */
   {"vz", 0},       /* zone morte de vitesse pour le terme D, rad/s */
+  {"i2c", 400},    /* horloge I2C, kHz */
+  {"rbit", 1},     /* 1 = rejette les mots dont les bits reserves l[1:0]
+                    * ne sont pas nuls (signature d'une trame corrompue) */
+  {"cible", 0},    /* mode 5 : position visee, rad depuis le zero ; la
+                    * consigne y va a vr rad/s (vr = 0 : saut) */
 };
 #define PV(i) par[i].val
 
@@ -116,7 +122,7 @@ static void debloqueBus()
   pinMode(A4, INPUT_PULLUP);                  delayMicroseconds(50);
   pinMode(A5, INPUT);
   Wire.begin();
-  Wire.setClock(400000);
+  Wire.setClock((uint32_t)(PV(P_I2C) * 1000.0f));
 }
 
 static uint8_t lisMot(uint16_t& mot)
@@ -280,6 +286,7 @@ static void execute(char* l)
     for (uint8_t i = 0; i < NPAR; i++)
       if (!strcmp(l, par[i].nom)) {
         par[i].val = atof(sp + 1);
+        if (i == P_I2C) Wire.setClock((uint32_t)(par[i].val * 1000.0f));
         txt.print(F("#= ")); txt.print(par[i].nom); txt.print(' ');
         txt.print(par[i].val, 5); txt.envoie();
         return;
@@ -342,9 +349,11 @@ void loop()
   uint16_t mot = 0;
   uint8_t err = lisMot(mot);
   uint16_t raw14 = raw14Prec;
+  if (!err && PV(P_RBIT) > 0 && (mot & 0x03)) err = 3;
+  if (!err && ((mot >> 2) == 0x3FFF || (mot >> 2) == 0)) err = 4;
   if (err) {
     fl |= 0x01;
-    if (++nErr >= 2) { debloqueBus(); nErr = 0; }
+    if (err <= 2 && ++nErr >= 2) { debloqueBus(); nErr = 0; }
   } else {
     nErr = 0;
     uint16_t r = mot >> 2;
@@ -377,7 +386,7 @@ void loop()
   if (mode != modePrec) {
     if (mode == 0) { driver.disable(); pontActif = false; }
     else if (!pontActif) { driver.enable(); pontActif = true; }
-    if (mode == 5 || mode == 6) zero();
+    if (mode == 5 && modePrec != 5) consigne = angleRel();  /* sans a-coup */
     modePrec = mode;
   }
   bool injOn = false;
@@ -389,7 +398,11 @@ void loop()
   switch (mode) {
     case 2: u = PV(P_UQ) + inj; break;
     case 5:
-      consigne += PV(P_VR) * ts;
+      if (PV(P_VR) <= 0) consigne = PV(P_CIBLE);
+      else {
+        float pas = PV(P_VR) * ts, e = PV(P_CIBLE) - consigne;
+        consigne += (e > pas) ? pas : (e < -pas) ? -pas : e;
+      }
       u = -PV(P_K) * (rel - consigne) + terme_D(vitF) + inj; break;
     case 6: u = loiCrans(rel, vitF, fl) + inj; break;
   }
