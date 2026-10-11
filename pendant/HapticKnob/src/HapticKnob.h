@@ -116,6 +116,7 @@ class HapticKnob {
   bool sauveCalibration();
   bool chargeCalibration();
   bool cogging() const { return cogOk_; }
+  int16_t coggingMV(uint16_t i) const { return cog_[i & 511]; }  /* table, mV */
 
   /* --- diagnostic --- */
   uint32_t erreursCapteur = 0;    /* lectures rejetees (NACK, bits reserves) */

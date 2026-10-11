@@ -4,7 +4,7 @@
  * Port serie (1 Mbaud), une lettre :
  *   n  mode suivant          p  pause / reprise du defilement
  *   c  CALIBRATION (moteur libre, ~50 s, rangee en EEPROM)
- *   ?  etat
+ *   ?  etat                  k  table de cogging (512 valeurs, mV)
  * Les crans franchis sont imprimes ("pos 12 (+1)"). */
 #include <HapticKnob.h>
 #include "Arduino_LED_Matrix.h"
@@ -90,6 +90,11 @@ void loop()
       affiche("CAL");
       knob.calibre(&Serial);
       active(courant);
+    }
+    else if (c == 'k') {
+      Serial.print(F("#cog"));
+      for (uint16_t i = 0; i < 512; i++) { Serial.print(' '); Serial.print(knob.coggingMV(i)); }
+      Serial.println();
     }
     else if (c == '?') {
       Serial.print(F("# mode ")); Serial.print(modes[courant].aff);
