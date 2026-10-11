@@ -40,7 +40,23 @@ void __USBStart();
 #else
 #define LIEN Serial
 #endif
-static uint32_t tramesPerdues = 0;   /* tampon USB plein : trame abandonnee */
+#include "FspTimer.h"
+static uint32_t tramesPerdues = 0;
+static volatile uint32_t gardeCoupures = 0;  /* coupures par la garde AGT1 */   /* tampon USB plein : trame abandonnee */
+
+/* PROFILEUR : temps cumule et maximal de chaque section de la boucle, lu
+ * par la commande 'prof' (puis remis a zero). Sert a trouver ou passe le
+ * temps quand la cadence chute -- la periode ne se suppose pas, elle se lit. */
+enum { S_HORS, S_CMD, S_I2C, S_CALC, S_PWM, S_TX, NSEC };
+static const char* const NOM_SEC[NSEC] = {"hors", "cmd", "i2c", "calc", "pwm", "tx"};
+static uint32_t secSom[NSEC], secMax[NSEC], secN = 0;
+static uint32_t tSec = 0;
+static inline void sec(uint8_t i)
+{
+  uint32_t t = micros(), d = t - tSec;
+  secSom[i] += d; if (d > secMax[i]) secMax[i] = d;
+  tSec = t;
+}
 
 /* N'ecrit QUE si tout tient : jamais d'attente dans la boucle. */
 static bool ecrit(const uint8_t* b, size_t n)
@@ -345,6 +361,19 @@ static void execute(char* l)
     nInj = 0; phInj = 0; lfsr = 0xACE1;
     return;
   }
+  if (!strcmp(l, "prof")) {
+    txt.print(F("#prof n=")); txt.print(secN);
+    for (uint8_t i = 0; i < NSEC; i++) {
+      txt.print(' '); txt.print(NOM_SEC[i]); txt.print('=');
+      txt.print(secN ? secSom[i] / secN : 0); txt.print('/'); txt.print(secMax[i]);
+    }
+    txt.print(F(" perdues=")); txt.print(tramesPerdues);
+    txt.print(F(" garde=")); txt.print(gardeCoupures);
+    txt.envoie();
+    for (uint8_t i = 0; i < NSEC; i++) secSom[i] = secMax[i] = 0;
+    secN = 0;
+    return;
+  }
   if (!strcmp(l, "z"))  { zero(); txt.print(F("# zero")); txt.envoie(); return; }
   char* sp = strchr(l, ' ');
   if (sp) {
@@ -371,6 +400,29 @@ static void lisCommandes()
     if (c == '\n' || c == '\r') {
       if (nl) { ligne[nl] = 0; execute(ligne); nl = 0; }
     } else if (nl < sizeof(ligne) - 1) ligne[nl++] = c;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * GARDE LOGICIELLE : AGT1 a 100 Hz. Si la boucle n'a pas avance depuis
+ * 100 ms, le pont est coupe et le mode passe a 0.
+ * Elle REMPLACE le chien de garde materiel en USB natif : quand le PC
+ * demande un flash (1200 bps), le coeur ouvre SON propre WDT pour
+ * redemarrer en bootloader ; si l'application l'a deja ouvert, il tombe dans
+ * un while(1) DANS l'interruption USB (SerialUSB.cpp:178) et la carte reste
+ * figee, USB enumere, jusqu'a un double appui sur RESET. Vecu le 2026-10-11.
+ * ------------------------------------------------------------------ */
+static FspTimer garde;
+static volatile uint8_t gardeTicks = 0;
+static void gardeCb(timer_callback_args_t*)
+{
+  static uint32_t prec = 0;
+  uint32_t m = n;
+  if (m != prec) { prec = m; gardeTicks = 0; return; }
+  if (++gardeTicks >= 10 && pontActif) {
+    driver.disable(); pontActif = false;
+    par[P_MODE].val = 0; modePrec = 0;
+    gardeCoupures++;
   }
 }
 
@@ -417,20 +469,38 @@ void setup()
   for (uint8_t i = 0; i < NH; i++) { histAcc[i] = acc; histT[i] = micros(); }
   zero();
   txt.print(F("# knob_lab pret")); txt.envoie();
+#if USB_NATIF
+  {
+    uint32_t p = R_FSP_SystemClockHzGet(FSP_PRIV_CLOCK_PCLKB) / (8UL * 100UL);
+    garde.begin(TIMER_MODE_PERIODIC, AGT_TIMER, 1, p, 1, TIMER_SOURCE_DIV_8, gardeCb);
+    garde.setup_overflow_irq(10);
+    garde.open(); garde.start();
+  }
+#else
   WDT.begin(250);                     /* boucle figee 250 ms -> reset */
+#endif
 }
 
 void loop()
 {
   static uint32_t tProchain = micros(), tPrec = micros();
+#if !USB_NATIF
   WDT.refresh();
+#endif
   digitalWrite(LED_BUILTIN, (millis() >> 9) & 1);
   ICI(1);
+  uint32_t tc0 = micros();
   lisCommandes();
+  uint32_t dcmd = micros() - tc0;
 
   uint32_t per = (uint32_t)PV(P_PER);
   if ((int32_t)(micros() - tProchain) < 0) return;
   uint32_t t0 = micros();
+  /* tout ce qui s'est passe depuis la fin de l'iteration precedente, moins
+   * l'attente active normale : c'est 'hors' */
+  secSom[S_CMD] += dcmd; if (dcmd > secMax[S_CMD]) secMax[S_CMD] = dcmd;
+  tSec = t0;
+  secN++;
   tProchain += per;
   if ((int32_t)(t0 - tProchain) > (int32_t)(4 * per)) tProchain = t0 + per;
   uint32_t dt = t0 - tPrec; tPrec = t0;
@@ -444,6 +514,7 @@ void loop()
   uint16_t mot = 0;
   uint8_t err = lisMot(mot);
   ICI(3);
+  sec(S_I2C);
   uint16_t raw14 = raw14Prec;
   if (!err && PV(P_RBIT) > 0 && (mot & 0x03)) err = 3;
   if (!err && ((mot >> 2) == 0x3FFF || (mot >> 2) == 0)) err = 4;
@@ -528,6 +599,7 @@ void loop()
   }
   else if (mode >= 1) applique(u, raw14);
 
+  sec(S_PWM);
   if (pontActif) fl |= 0x04;
   if (!digitalRead(PIN_DIAG)) fl |= 0x08;
   uint32_t occ = micros() - t0;
@@ -560,4 +632,5 @@ void loop()
     ecrit(f, 12);
     ICI(8);
   }
+  sec(S_TX);
 }
