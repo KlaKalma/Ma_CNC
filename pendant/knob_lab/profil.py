@@ -11,8 +11,9 @@ import sys, os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lab import Lab
 DEG = 3.141592653589793 / 180
-COMMUN = dict(mode=6, tau=0, vz=0, nbc=0, kmur=0, umax=2.2, vmax=60, it=0, stream=0)
-BASE = dict(w=27*DEG, dz=0.5*DEG, snap=1.1, d=0.045, nv=2, cog=1, clic=0, clicms=1.0)
+COMMUN = dict(mode=6, tau=0, vz=0, umax=2.2, vmax=60, it=0, stream=0)
+BASE = dict(w=27*DEG, dz=0.5*DEG, snap=1.1, d=0.045, nv=2, cog=1, clic=0, clicms=1.0,
+            nbc=0, kmur=0, fortn=0, fortsnap=1.6, fortclic=0)
 def B(kd, **kw):
     q = dict(BASE, kd=kd); q.update(kw); return q
 PROFILS = {
@@ -26,6 +27,13 @@ PROFILS = {
   'B12c':('12C', '27 deg, 1,2 V + impulsion 0,8 V x 1 ms', B(1.2, clic=0.8)),
   'B09c':('9C',  '27 deg, 0,9 V + impulsion 0,8 V x 1 ms', B(0.9, clic=0.8)),
   'B09C':('9CC', '27 deg, 0,9 V + impulsion 1,5 V x 1 ms', B(0.9, clic=1.5)),
+  # --- les trois modes de la demo ---
+  'menu': ('MEN', 'menu : 27 deg, 1,05 V + tic 1,5 V (reglage prefere ; kd reglable)',
+           B(1.05, clic=1.5)),
+  'ar':   ('AR',  'aller-retour : 2 crans a 30 deg, butees qui ramenent',
+           B(1.05, w=30*DEG, nbc=2, kmur=8.0, clic=1.5)),
+  'p100': ('100', 'pendant d axe : 100 crans/tour, un fort tous les 10',
+           B(0.32, w=3.6*DEG, dz=0.15*DEG, clic=0.5, fortn=10, fortsnap=1.8, fortclic=1.8)),
   'fin': ('FIN', '12 deg (30 crans/tour), 0,7 V', B(0.7, w=12*DEG, dz=0.3*DEG)),
   'libre': ('LIB', 'aucun cran : roue libre, juste le frottement du moteur', B(0.0, d=0.0)),
 }

@@ -14,11 +14,12 @@ args = sys.argv[1:]
 periode = 10.0
 if args[:1] == ['-t']:
     periode = float(args[1]); args = args[2:]
-noms = args or ['B', 'B12', 'B09', 'B12c', 'B09c', 'B09C']
+noms = args or ['ar', 'p100', 'menu']
 L = Lab()
 try:
     while True:
         for nom in noms:
+            L.set(mode=0); L.zero()
             txt = charge(L, nom)
             print(f'{time.strftime("%H:%M:%S")}  [{PROFILS[nom][0]:>3s}] {nom:5s} {txt}', flush=True)
             time.sleep(periode)

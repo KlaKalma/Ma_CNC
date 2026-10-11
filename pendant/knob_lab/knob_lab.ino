@@ -189,7 +189,7 @@ enum {
   P_IT, P_IA, P_IF, P_F1, P_F2, P_IDUR, P_IHOLD,
   P_W, P_DZ, P_SNAP, P_KD, P_NBC, P_KMUR, P_VZ,
   P_I2C, P_RBIT, P_CIBLE, P_LIEN, P_VTEST,
-  P_S1N, P_S1M, P_S2N, P_S2M, P_COG, P_KH, P_CLIC, P_CLICMS, NPAR
+  P_S1N, P_S1M, P_S2N, P_S2M, P_COG, P_KH, P_CLIC, P_CLICMS, P_FORTN, P_FORTSNAP, P_FORTCLIC, NPAR
 };
 static Par par[NPAR] = {
   {"mode", 6},     /* DEMARRAGE en mode 6 : loi de crans B (e12), sans PC.
@@ -252,6 +252,14 @@ static Par par[NPAR] = {
                     * sans elan net. Anticipation pure : hors de la boucle,
                     * aucun effet sur la stabilite. 0 = pas d'impulsion. */
   {"clicms", 1.0f},/* duree de CHAQUE phase de l'impulsion, ms */
+  /* CRANS FORTS (pendant d'axe : un cran fort tous les 10). La PENTE reste
+   * celle des crans normaux -- elle est plafonnee par la stabilite (~10
+   * V/rad, modele.py). Le cran fort est donc plus dur a QUITTER (bascule plus
+   * loin : on monte plus haut sur la meme pente) et son arrivee est marquee
+   * par un tic plus fort, qui lui n'a aucune limite de stabilite. */
+  {"fortn", 0},      /* un cran fort tous les fortn (0 = aucun) */
+  {"fortsnap", 1.6f},/* bascule des crans forts, fraction de la demi-largeur */
+  {"fortclic", 0},   /* impulsion en arrivant sur un cran fort, V */
 };
 #define PV(i) par[i].val
 
@@ -417,32 +425,47 @@ static float terme_D(float v)
   return -PV(P_D) * v;
 }
 
+static bool estFort(int32_t c)
+{
+  int32_t n = (int32_t)PV(P_FORTN);
+  return n > 0 && ((c % n) + n) % n == 0;
+}
+
+static float clicAmp = 0;           /* amplitude de l'impulsion en cours */
+
 static float loiCrans(float rel, float v, uint8_t& fl)
 {
   float w = PV(P_W);
   if (w <= 0) return terme_D(v);
   float demi = 0.5f * w;
-  float bascule = PV(P_SNAP) * demi;
+  float basculeN = PV(P_SNAP) * demi;                      /* cran normal */
+  float bascule = estFort(cran) ? PV(P_FORTSNAP) * demi : basculeN;
   int32_t nb = (int32_t)PV(P_NBC);
   int32_t cMin = -(nb / 2), cMax = cMin + nb - 1;
 
   float e = rel - cran * w;
   if (e > bascule && (nb == 0 || cran < cMax)) { cran++; fl |= 0x80; clicSens = 1; }
   else if (e < -bascule && (nb == 0 || cran > cMin)) { cran--; fl |= 0x80; clicSens = -1; }
-  if ((fl & 0x80) && PV(P_CLIC) > 0)
-    clicN = (int16_t)(2.0f * PV(P_CLICMS) * 1e-3f / (PV(P_PER) * 1e-6f) + 0.5f);
+  if (fl & 0x80) {
+    clicAmp = estFort(cran) && PV(P_FORTCLIC) > 0 ? PV(P_FORTCLIC) : PV(P_CLIC);
+    if (clicAmp > 0)
+      clicN = (int16_t)(2.0f * PV(P_CLICMS) * 1e-3f / (PV(P_PER) * 1e-6f) + 0.5f);
+  }
   e = rel - cran * w;
 
+  /* pente COMMUNE a tous les crans, calee sur le cran normal */
+  float pente = PV(P_KD) / (basculeN - PV(P_DZ));
   float u;
-  if (nb != 0 && (e > demi || e < -demi) &&
-      ((cran == cMax && e > 0) || (cran == cMin && e < 0))) {
-    /* hors plage : mur lineaire au-dela du bord du dernier cran */
-    float ex = (e > 0) ? e - demi : e + demi;
-    u = -PV(P_KD) - PV(P_KMUR) * ex;
-    if (e < 0) u = PV(P_KD) - PV(P_KMUR) * ex;
+  if (nb != 0 && ((cran == cMax && e > demi) || (cran == cMin && e < -demi))) {
+    /* hors plage : la force du bord du cran, puis un mur de raideur kmur.
+     * CONTINU au bord (pas de marche de couple). Il ramene toujours dans la
+     * plage, sans aucun cran au-dela. */
+    float bord = pente * (demi - PV(P_DZ));
+    float ex = (e > 0) ? e - demi : -(e + demi);
+    float f = bord + PV(P_KMUR) * ex;
+    u = (e > 0) ? -f : f;
   } else {
     float a = fabsf(e) - PV(P_DZ);
-    float pente = PV(P_KD) / (bascule - PV(P_DZ));
     float f = (a > 0) ? pente * a : 0;
     u = (e > 0) ? -f : f;
   }
@@ -747,7 +770,7 @@ void loop()
   if (clicN > 0 && mode >= 6) {
     /* premiere moitie : dans le sens du passage ; seconde : a l'inverse */
     int16_t moitie = (int16_t)(PV(P_CLICMS) * 1e-3f / (PV(P_PER) * 1e-6f) + 0.5f);
-    u += (clicN > moitie ? 1 : -1) * clicSens * PV(P_CLIC);
+    u += (clicN > moitie ? 1 : -1) * clicSens * clicAmp;
     clicN--;
   }
   if (PV(P_COG) != 0 && (mode == 2 || mode >= 5))
