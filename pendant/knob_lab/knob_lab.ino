@@ -41,6 +41,8 @@ void __USBStart();
 #define LIEN Serial
 #endif
 #include "FspTimer.h"
+#include "boot.h"
+#include "r_wdt.h"
 static uint32_t tramesPerdues = 0;
 static volatile uint32_t gardeCoupures = 0;  /* coupures par la garde AGT1 */   /* tampon USB plein : trame abandonnee */
 
@@ -360,6 +362,32 @@ static void execute(char* l)
     recReste = (uint32_t)atol(l + 4); recK = 0;
     nInj = 0; phInj = 0; lfsr = 0xACE1;
     return;
+  }
+  if (!strcmp(l, "boot") || !strcmp(l, "bootw")) {
+    /* Redemarre en BOOTLOADER, comme un double appui sur RESET. Le reset
+     * remet P408 a zero : l'USB revient a l'ESP32 et le flash habituel
+     * marche. Necessaire en USB natif : la demande 1200 bps du coeur ne
+     * redemarre pas la carte (mesure le 2026-10-11, carte figee). */
+    driver.disable();
+    txt.print(F("# boot")); txt.envoie();
+    delay(20);
+    R_SYSTEM->PRCR = 0xA502;
+    BOOT_DOUBLE_TAP_DATA = DOUBLE_TAP_MAGIC;
+    R_SYSTEM->PRCR = 0xA500;
+    if (!strcmp(l, "bootw")) {
+      /* variante : reset par le WDT, exactement comme le coeur
+       * (SerialUSB.cpp) -- possible ici car l'application n'ouvre plus
+       * le WDT en USB natif */
+      wdt_instance_ctrl_t c; wdt_cfg_t w;
+      w.timeout = WDT_TIMEOUT_16384; w.clock_division = WDT_CLOCK_DIVISION_256;
+      w.window_start = WDT_WINDOW_START_100; w.window_end = WDT_WINDOW_END_0;
+      w.reset_control = WDT_RESET_CONTROL_RESET;
+      w.stop_control = WDT_STOP_CONTROL_ENABLE;
+      R_WDT_Open(&c, &w);
+      R_WDT_Refresh(&c);
+      while (1) { }
+    }
+    NVIC_SystemReset();
   }
   if (!strcmp(l, "prof")) {
     txt.print(F("#prof n=")); txt.print(secN);
