@@ -285,12 +285,19 @@ def decode(frames, p):
     err = (fl & FL_ERR) != 0
     # deroulement sur le brut, lectures en erreur = valeur precedente
     rr = raw.astype(np.int64).copy()
+    ok = np.nonzero(~err)[0]
+    if len(ok):
+        rr[:ok[0]] = rr[ok[0]]          # lectures en erreur au debut
     for i in np.nonzero(err)[0]:
-        rr[i] = rr[i - 1] if i else rr[i]
+        if i > ok[0] if len(ok) else False:
+            rr[i] = rr[i - 1]
     d = np.diff(rr)
     d = (d + 8192) % 16384 - 8192
     acc = np.concatenate([[0], np.cumsum(d)]) + rr[0]
-    pts = p.get('per', 500) * 1e-6 * max(1, p.get('dec', 1))
+    # periode REELLE : moyenne des dt mesures par le firmware (la boucle a deja
+    # tourne a 1 kHz au lieu de 2 sans prevenir -- vitesses doublees cote hote)
+    pts = (float(np.median(dt[1:])) * 1e-6 if len(dt) > 2
+           else p.get('per', 500) * 1e-6) * max(1, p.get('dec', 1))
     gaps = (np.diff(seq) % 256) - 1
     return dict(seq=seq, mot=mot, raw=raw, acc=acc, ang=acc * LSB, u=u,
                 fl=fl, dt=dt, occ=occ, vfw=vfw, err=err, ts=pts,

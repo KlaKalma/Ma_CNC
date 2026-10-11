@@ -60,14 +60,39 @@ static inline void sec(uint8_t i)
   tSec = t;
 }
 
-/* N'ecrit QUE si tout tient : jamais d'attente dans la boucle. */
+/* N'ecrit QUE si tout tient : jamais d'attente dans la boucle.
+ * En USB natif on ecrit dans la FIFO TinyUSB SANS forcer l'envoi :
+ * SerialUSB.write() fait un tud_cdc_write_flush() a chaque appel, soit un
+ * transfert USB par trame de 12 octets, et MESURE : 662 us par trame en
+ * moyenne -> la boucle tombait a 1 kHz pendant les enregistrements. TinyUSB
+ * envoie seul un paquet des que 64 octets sont prets ; ecritFlush() force
+ * l'envoi du reste, appele toutes les quelques iterations. */
+#if USB_NATIF
+#include "tusb.h"
+#include "device/usbd_pvt.h"
+#endif
 static bool ecrit(const uint8_t* b, size_t n)
 {
 #if USB_NATIF
-  if (LIEN.availableForWrite() < (int)n) { tramesPerdues++; return false; }
-#endif
+  if (!tud_cdc_connected()) return false;
+  usbd_int_set(false);
+  bool place = tud_cdc_write_available() >= n;
+  if (place) tud_cdc_write(b, n);
+  usbd_int_set(true);
+  if (!place) tramesPerdues++;
+  return place;
+#else
   LIEN.write(b, n);
   return true;
+#endif
+}
+static void ecritFlush()
+{
+#if USB_NATIF
+  usbd_int_set(false);
+  tud_cdc_write_flush();
+  usbd_int_set(true);
+#endif
 }
 
 /* FIL D'ARIANE : survit a un reset (section .noinit). Chaque etape de la
@@ -168,6 +193,7 @@ class TxtBuf : public Print {
     uint8_t t[204];
     t[0] = h[0]; t[1] = h[1]; memcpy(t + 2, b, n); t[2 + n] = x;
     ecrit(t, n + 3);
+    ecritFlush();
     n = 0;
   }
 };
@@ -660,5 +686,6 @@ void loop()
     ecrit(f, 12);
     ICI(8);
   }
+  if ((n & 7) == 0) ecritFlush();     /* latence bornee a 4 ms */
   sec(S_TX);
 }
