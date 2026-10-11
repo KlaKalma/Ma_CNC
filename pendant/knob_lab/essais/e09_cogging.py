@@ -10,13 +10,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from lab import *
 
 K, D, VR = 30.0, 0.04, 0.4
+COG = float(os.environ.get('COG', '0'))
+SUF = os.environ.get('SUF', '')
 TOUR = 2 * np.pi
 with Lab() as L:
     L.zero()
-    L.set(mode=5, k=K, d=D, vr=VR, cible=0, umax=2.2)
+    L.set(mode=5, k=K, d=D, vr=VR, cible=0, umax=2.2, cog=COG)
     time.sleep(0.5)
-    L.set(cible=round(TOUR + 0.3, 4)); ra = L.rec((TOUR + 0.3) / VR + 0.5, nom='e09_aller')
-    L.set(cible=-0.3);                 rr = L.rec((TOUR + 0.6) / VR + 0.5, nom='e09_retour')
+    L.set(cible=round(TOUR + 0.3, 4)); ra = L.rec((TOUR + 0.3) / VR + 0.5, nom=f'e09_aller{SUF}')
+    L.set(cible=-0.3);                 rr = L.rec((TOUR + 0.6) / VR + 0.5, nom=f'e09_retour{SUF}')
     L.set(cible=0); time.sleep(1.5)
     L.set(mode=0)
 
@@ -45,7 +47,7 @@ F = np.abs(np.fft.rfft(c0)) * 2 / ok.sum()
 top = np.argsort(F[1:200])[::-1][:6] + 1
 print('harmoniques dominants (periodes/tour : amplitude V) :',
       ', '.join(f'{k}:{F[k]:.3f}' for k in top))
-np.savez(os.path.join(OUT, 'e09_carte.npz'), cen=cen, cog=cog, fr=fr, ua=ua, ub=ub)
+np.savez(os.path.join(OUT, f'e09_carte{SUF}.npz'), cen=cen, cog=cog, fr=fr, ua=ua, ub=ub)
 import matplotlib; matplotlib.use('Agg'); import matplotlib.pyplot as plt
 fig, ax = plt.subplots(3, 1, figsize=(14, 10))
 ax[0].plot(np.degrees(cen), ua, lw=.6, label='u aller'); ax[0].plot(np.degrees(cen), ub, lw=.6, label='u retour')
@@ -54,4 +56,4 @@ ax[1].plot(np.degrees(cen), cog, lw=.7); ax[1].set_ylabel('cogging c(a) (V)'); a
 ax[1].set_xlabel('angle capteur (deg)')
 ax[2].stem(np.arange(1, 200), F[1:200], markerfmt=' ', basefmt=' '); ax[2].set_xlabel('periodes par tour')
 ax[2].set_ylabel('amplitude (V)'); ax[2].grid(alpha=.3)
-fig.tight_layout(); fig.savefig(os.path.join(OUT, 'e09_cogging.png'), dpi=75)
+fig.tight_layout(); fig.savefig(os.path.join(OUT, f'e09_cogging{SUF}.png'), dpi=75)

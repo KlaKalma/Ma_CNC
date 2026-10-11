@@ -41,6 +41,7 @@ void __USBStart();
 #define LIEN Serial
 #endif
 #include "FspTimer.h"
+#include "cogging.h"
 #include "boot.h"
 #include "r_wdt.h"
 static uint32_t tramesPerdues = 0;
@@ -122,10 +123,11 @@ enum {
   P_IT, P_IA, P_IF, P_F1, P_F2, P_IDUR, P_IHOLD,
   P_W, P_DZ, P_SNAP, P_KD, P_NBC, P_KMUR, P_VZ,
   P_I2C, P_RBIT, P_CIBLE, P_LIEN, P_VTEST,
-  P_S1N, P_S1M, P_S2N, P_S2M, NPAR
+  P_S1N, P_S1M, P_S2N, P_S2M, P_COG, P_KH, NPAR
 };
 static Par par[NPAR] = {
-  {"mode", 0},     /* 0 pont coupe  1 Uq=0  2 couple  3 vecteur fixe
+  {"mode", 6},     /* DEMARRAGE en mode 6 : loi de crans B (e12), sans PC.
+                    * 0 pont coupe  1 Uq=0  2 couple  3 vecteur fixe
                     * 4 vecteur a el_mesure+dlt  5 ressort  6 crans */
   {"stream", 0},   /* 1 = envoie les echantillons */
   {"dec", 1},      /* 1 echantillon envoye sur 'dec' */
@@ -135,8 +137,8 @@ static Par par[NPAR] = {
   {"mag", 0},      /* modes 3/4 : amplitude du vecteur, V */
   {"dlt", 0},      /* mode 4 : decalage electrique, rad */
   {"k", 0},        /* mode 5 : raideur, V/rad */
-  {"d", 0},        /* modes 5/6 : amortissement, V.s/rad */
-  {"nv", 4},       /* base de la difference finie de vitesse, echantillons */
+  {"d", 0.045f},        /* modes 5/6 : amortissement, V.s/rad */
+  {"nv", 2},       /* base de la difference finie de vitesse, echantillons */
   {"tau", 0},      /* constante du filtre de vitesse, s (0 = aucun) */
   {"thr", 0},      /* rejet des lectures a plus de thr LSB de la prediction
                     * (0 = aucun rejet) */
@@ -153,10 +155,10 @@ static Par par[NPAR] = {
   {"f2", 200},     /* chirp : frequence d'arrivee, Hz */
   {"idur", 1},     /* duree de l'injection, s */
   {"ihold", 1},    /* PRBS : echantillons par palier */
-  {"w", 0.2094f},  /* mode 6 : largeur de cran, rad */
-  {"dz", 0},       /* mode 6 : zone morte, rad */
-  {"snap", 1.0f},  /* mode 6 : bascule, fraction de la demi-largeur */
-  {"kd", 0},       /* mode 6 : force au point de bascule, V */
+  {"w", 0.4712f},  /* mode 6 : largeur de cran, rad */
+  {"dz", 0.0087f},       /* mode 6 : zone morte, rad */
+  {"snap", 1.1f},  /* mode 6 : bascule, fraction de la demi-largeur */
+  {"kd", 1.6f},       /* mode 6 : force au point de bascule, V */
   {"nbc", 0},      /* mode 6 : nombre de crans (0 = infini) */
   {"kmur", 0},     /* mode 6 : raideur du mur hors plage, V/rad */
   {"vz", 0},       /* zone morte de vitesse pour le terme D, rad/s */
@@ -174,6 +176,11 @@ static Par par[NPAR] = {
    * Sert a changer de mode SANS ecrire pendant le flux : le pont USB de la
    * R4 se bloque quand l'hote ecrit pendant que la carte streame (e07). */
   {"s1n", 0}, {"s1m", 0}, {"s2n", 0}, {"s2m", 0},
+  {"cog", 1},      /* compensation du cogging (table e09), 0..1, modes 2/5/6/7 */
+  {"kh", 5},       /* mode 7 : raideur de la MAIN VIRTUELLE, V/rad. Mode 7 =
+                    * loi de crans (mode 6) + un ressort kh dont la consigne
+                    * avance a vr vers 'cible' : on traverse les crans comme
+                    * une main, sans main. */
 };
 #define PV(i) par[i].val
 
@@ -278,6 +285,14 @@ static void vecteur(float mag, float angEl)
 }
 
 static float mecanique(uint16_t raw14) { return (float)raw14 * LSB; }
+
+/* couple de cogging a cet angle, V (interpolation lineaire dans la table) */
+static float cogging(uint16_t raw14)
+{
+  uint16_t i = raw14 >> 5, j = (i + 1) & 511;
+  float fr = (raw14 & 31) * (1.0f / 32.0f);
+  return 0.001f * (COGGING_MV[i] + fr * (COGGING_MV[j] - COGGING_MV[i]));
+}
 
 static void applique(float u, uint16_t raw14)
 {
@@ -618,7 +633,8 @@ void loop()
   if (mode != modePrec) {
     if (mode == 0) { driver.disable(); pontActif = false; }
     else if (!pontActif) { driver.enable(); pontActif = true; }
-    if (mode == 5 && modePrec != 5) consigne = angleRel();  /* sans a-coup */
+    if ((mode == 5 || mode == 7) && modePrec != 5 && modePrec != 7)
+      consigne = angleRel();          /* sans a-coup */
     modePrec = mode;
   }
   bool injOn = false;
@@ -637,8 +653,17 @@ void loop()
       }
       u = -PV(P_K) * (rel - consigne) + terme_D(vitF) + inj; break;
     case 6: u = loiCrans(rel, vitF, fl) + inj; break;
+    case 7:
+      if (PV(P_VR) <= 0) consigne = PV(P_CIBLE);
+      else {
+        float pas = PV(P_VR) * ts, e = PV(P_CIBLE) - consigne;
+        consigne += (e > pas) ? pas : (e < -pas) ? -pas : e;
+      }
+      u = loiCrans(rel, vitF, fl) + PV(P_KH) * (consigne - rel) + inj; break;
   }
-  if (fabsf(vitF) > PV(P_VMAX) && (mode == 5 || mode == 6)) { u = 0; fl |= 0x40; }
+  if (PV(P_COG) != 0 && (mode == 2 || mode >= 5))
+    u -= PV(P_COG) * cogging(raw14);
+  if (fabsf(vitF) > PV(P_VMAX) && mode >= 5) { u = 0; fl |= 0x40; }
   if (u > PV(P_UMAX))  { u = PV(P_UMAX);  fl |= 0x20; }
   if (u < -PV(P_UMAX)) { u = -PV(P_UMAX); fl |= 0x20; }
 
