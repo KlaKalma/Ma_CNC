@@ -12,7 +12,8 @@ import sys, os, time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from lab import *
 
-MAG, DUREE, N = 0.6, 0.05, 24
+MAG, N = 0.6, 24
+N4 = 100                                       # echantillons de vecteur = 50 ms
 with Lab() as L:
     L.set(mode=1, mag=MAG)
     time.sleep(0.3)
@@ -21,13 +22,9 @@ with Lab() as L:
         ordre = range(N) if tour == 0 else reversed(range(N))
         for i in ordre:
             dl = 2 * np.pi * i / N
-            L.set(dlt=round(dl, 5))
-            L.frames = []; L.recording = True; L.set(stream=1)
-            time.sleep(0.05)
-            L.set(mode=4); time.sleep(DUREE); L.set(mode=1)
-            time.sleep(0.25)
-            L.set(stream=0); L.recording = False
-            r = decode(L.frames, {'per': 500})
+            L.set(dlt=round(dl, 5), mode=1)
+            # sequence firmware : 20 ech. au repos, N4 ech. de vecteur, frein
+            r = L.rec(0.35, s1n=20, s1m=4, s2n=20 + N4, s2m=1)
             on = np.nonzero(r['u'] > 0)[0]
             if len(on) < 5:
                 continue
@@ -35,6 +32,7 @@ with Lab() as L:
             d = a[on[-1]] - a[on[0]]
             res.append((dl, d, len(on)))
             print(f'dlt={np.degrees(dl):6.1f}  dep={np.degrees(d):7.2f} deg  n={len(on)}', flush=True)
+            time.sleep(0.2)
     L.set(mode=0)
 
 res = np.array(res)

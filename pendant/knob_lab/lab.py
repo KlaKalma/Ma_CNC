@@ -94,9 +94,21 @@ class Lab:
                 if i + 2 > n:
                     break
                 ln = b[i + 1]
+                part = b[i + 2:min(n, i + 2 + ln)]
+                if ln == 0 or any(v < 0x20 or v > 0x7E for v in part):
+                    self.badsum += 1
+                    i += 1
+                    continue
                 if i + 3 + ln > n:
                     break
                 t = b[i + 2:i + 2 + ln]
+                # un 0x5A au milieu d'une trame de donnees ferait attendre
+                # jusqu'a 255 octets : le texte est ASCII imprimable, sinon
+                # ce n'est pas un debut de trame texte
+                if ln == 0 or any(v < 0x20 or v > 0x7E for v in t):
+                    self.badsum += 1
+                    i += 1
+                    continue
                 x = 0
                 for v in t:
                     x ^= v
@@ -115,12 +127,12 @@ class Lab:
     def cmd(self, line, attente=0.3, motif=None):
         with self.lock:
             self.txt.clear()
-        # octet par octet : la reception UART de la R4 a 2 Mbaud n'a pas de
-        # FIFO et perd un caractere des qu'une interruption tarde de 5 us
-        for c in (line + '\n').encode():
-            self.s.write(bytes([c]))
-            self.s.flush()
-            time.sleep(0.0003)
+        # UN SEUL write() par commande. Mesure (e06) : un write() par octet,
+        # pendant que la carte streame, FIGE le pont USB de l'ESP32 dans le
+        # sens carte -> PC (3 fois sur 10, avec ou sans moteur) ; en bloc,
+        # 0 sur 10. Les pertes de caractere se rattrapent par set() qui
+        # retente tant que l'accuse ne revient pas.
+        self.s.write((line + '\n').encode())
         t0 = time.time()
         while time.time() - t0 < attente:
             with self.lock:
@@ -156,17 +168,33 @@ class Lab:
         self.cmd('z', motif='# zero')
 
     # ---------------------------------------------------------- enregistrement
-    def rec(self, duree, go=False, nom=None):
+    def rec(self, duree, nom=None, **seq):
+        """Enregistre 'duree' secondes. UNE seule ecriture ('rec N'), puis
+        lecture seule : le firmware s'arrete tout seul. Ecrire pendant le flux
+        fige le pont USB de la R4 (e07). Les changements de mode pendant
+        l'enregistrement se programment AVANT : s1n/s1m, s2n/s2m."""
+        if seq:
+            self.set(**seq)
         p = self.params()
+        ts = p.get('per', 500) * 1e-6
+        n = int(round(duree / ts))
+        with self.lock:
+            self.txt.clear()
         self.frames = []
         self.recording = True
-        self.set(stream=1)
-        if go:
-            self.go()
-        self.vie(duree)
-        self.set(stream=0)
+        self.s.write(f'rec {n}\n'.encode())
+        t1 = time.time() + duree + 2.0
+        fini = False
+        while time.time() < t1 and not fini:
+            time.sleep(0.02)
+            with self.lock:
+                fini = any('rec fin' in t for t in self.txt)
         time.sleep(0.05)
         self.recording = False
+        if not fini:
+            raise RuntimeError(f'rec : pas de fin ({len(self.frames)} trames)')
+        if seq:
+            self.set(**{k: 0 for k in seq if k.endswith('n')})
         r = decode(self.frames, p)
         r['badsum'] = self.badsum
         if nom:
@@ -186,6 +214,49 @@ class Lab:
 
     def report(self, r, fichier, titre=''):
         return report(r, fichier, titre)
+
+
+def usb_reset(attente=8.0):
+    """Debloque le pont USB de la R4 sans toucher a la carte : desactive puis
+    reactive le port du Pi, ce qui force une reenumeration de l'ESP32. Le RA4M1
+    n'est PAS redemarre (verifie : il garde ses parametres). Mesure le
+    2026-10-11 : c'est le sens carte -> PC du pont qui cale, pas le RA4M1."""
+    import subprocess
+    p = '/sys/bus/usb/devices/1-0:1.0/usb1-port1/disable'
+    for v in ('1', '0'):
+        subprocess.run(['sudo', '-n', 'tee', p], input=v.encode(),
+                       stdout=subprocess.DEVNULL, check=True)
+        time.sleep(2.0)
+    t1 = time.time() + attente
+    while time.time() < t1 and not os.path.exists(PORT):
+        time.sleep(0.2)
+    time.sleep(1.0)
+
+
+def relance(L=None, essais=4):
+    """Rend une liaison vivante, quitte a reinitialiser le port USB."""
+    if L is not None:
+        try:
+            if vivante(L):
+                return L
+            L.close()
+        except Exception:
+            pass
+    for _ in range(essais):
+        usb_reset()
+        L = Lab()
+        if vivante(L):
+            return L
+        L.close()
+    raise RuntimeError('carte injoignable apres reinitialisations USB')
+
+
+def vivante(L, essais=3):
+    for _ in range(essais):
+        r = L.cmd('?', attente=0.5, motif='#P fin')
+        if any('fin' in x for x in r):
+            return True
+    return False
 
 
 # ======================================================================

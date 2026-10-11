@@ -51,7 +51,8 @@ enum {
   P_K, P_D, P_NV, P_TAU, P_THR, P_UMAX, P_SENS, P_ZEA, P_VMAX, P_VR,
   P_IT, P_IA, P_IF, P_F1, P_F2, P_IDUR, P_IHOLD,
   P_W, P_DZ, P_SNAP, P_KD, P_NBC, P_KMUR, P_VZ,
-  P_I2C, P_RBIT, P_CIBLE, P_LIEN, P_VTEST, NPAR
+  P_I2C, P_RBIT, P_CIBLE, P_LIEN, P_VTEST,
+  P_S1N, P_S1M, P_S2N, P_S2M, NPAR
 };
 static Par par[NPAR] = {
   {"mode", 0},     /* 0 pont coupe  1 Uq=0  2 couple  3 vecteur fixe
@@ -97,6 +98,11 @@ static Par par[NPAR] = {
                     * plus de 'lien' s (0 = jamais). Le pont USB peut se
                     * figer moteur en marche : mesure le 2026-10-11. */
   {"vtest", 30},   /* modes 2/4 : couple coupe au-dela, rad/s */
+  /* SEQUENCE PROGRAMMEE : pendant un 'rec', au s1n-ieme echantillon le mode
+   * devient s1m, puis au s2n-ieme il devient s2m (0 = etape inactive).
+   * Sert a changer de mode SANS ecrire pendant le flux : le pont USB de la
+   * R4 se bloque quand l'hote ecrit pendant que la carte streame (e07). */
+  {"s1n", 0}, {"s1m", 0}, {"s2n", 0}, {"s2m", 0},
 };
 #define PV(i) par[i].val
 
@@ -173,6 +179,8 @@ static float    phInj = 0;
 static uint16_t lfsr = 0xACE1;
 static float    injPrbs = 0;
 static uint8_t  seq = 0;
+static uint32_t recReste = 0;       /* echantillons restant a envoyer */
+static uint32_t recK = 0;           /* echantillons depuis le debut du rec */
 static int      modePrec = -1;
 static bool     pontActif = false;
 
@@ -297,6 +305,13 @@ static void execute(char* l)
   if (!strcmp(l, "?"))  { listePar(); return; }
   if (!strcmp(l, "go")) { nInj = 0; phInj = 0; lfsr = 0xACE1;
                           txt.print(F("# go")); txt.envoie(); return; }
+  if (!strncmp(l, "rec ", 4)) {
+    /* enregistrement de N echantillons, qui S'ARRETE SEUL : l'hote n'a
+     * plus rien a ecrire pendant le flux. Demarre aussi l'injection. */
+    recReste = (uint32_t)atol(l + 4); recK = 0;
+    nInj = 0; phInj = 0; lfsr = 0xACE1;
+    return;                           /* pas d'accuse : le flux en tient lieu */
+  }
   if (!strcmp(l, "z"))  { zero(); txt.print(F("# zero")); txt.envoie(); return; }
   char* sp = strchr(l, ' ');
   if (sp) {
@@ -428,7 +443,13 @@ void loop()
 
   /* ---- loi ---- */
   int mode = (int)PV(P_MODE);
-  if ((mode >= 2 && mode <= 4) && PV(P_LIEN) > 0 &&
+  /* sequence programmee pendant un rec */
+  if (recReste > 0) {
+    if (PV(P_S1N) > 0 && recK == (uint32_t)PV(P_S1N)) par[P_MODE].val = PV(P_S1M);
+    if (PV(P_S2N) > 0 && recK == (uint32_t)PV(P_S2N)) par[P_MODE].val = PV(P_S2M);
+    mode = (int)PV(P_MODE);
+  }
+  if (recReste == 0 && (mode >= 2 && mode <= 4) && PV(P_LIEN) > 0 &&
       millis() - dernierOctet > (uint32_t)(PV(P_LIEN) * 1000.0f)) {
     par[P_MODE].val = 0; mode = 0;
     txt.print(F("# liaison perdue : pont coupe")); txt.envoie();
@@ -477,7 +498,15 @@ void loop()
 
   /* ---- trame ---- */
   uint32_t dec = PV(P_DEC) < 1 ? 1 : (uint32_t)PV(P_DEC);
-  if (PV(P_STREAM) > 0 && (n % dec) == 0) {
+  bool envoie = (PV(P_STREAM) > 0 || recReste > 0) && (n % dec) == 0;
+  if (recReste > 0) {
+    recK++;
+    if (--recReste == 0) {           /* fin du rec : on le signale */
+      txt.print(F("# rec fin")); txt.envoie();
+      dernierOctet = millis();       /* la securite de liaison repart de 0 */
+    }
+  }
+  if (envoie) {
     uint8_t f[12];
     int16_t umv = (int16_t)constrain(lroundf(u * 1000.0f), -32767, 32767);
     int16_t vc  = (int16_t)constrain(lroundf(vitF * 100.0f), -32767, 32767);
