@@ -189,7 +189,7 @@ enum {
   P_IT, P_IA, P_IF, P_F1, P_F2, P_IDUR, P_IHOLD,
   P_W, P_DZ, P_SNAP, P_KD, P_NBC, P_KMUR, P_VZ,
   P_I2C, P_RBIT, P_CIBLE, P_LIEN, P_VTEST,
-  P_S1N, P_S1M, P_S2N, P_S2M, P_COG, P_KH, P_CLIC, P_CLICMS, P_FORTN, P_FORTSNAP, P_FORTCLIC, NPAR
+  P_S1N, P_S1M, P_S2N, P_S2M, P_COG, P_KH, P_CLIC, P_CLICMS, P_FORTN, P_FORTSNAP, P_FORTCLIC, P_FORTCLICMS, NPAR
 };
 static Par par[NPAR] = {
   {"mode", 6},     /* DEMARRAGE en mode 6 : loi de crans B (e12), sans PC.
@@ -260,6 +260,8 @@ static Par par[NPAR] = {
   {"fortn", 0},      /* un cran fort tous les fortn (0 = aucun) */
   {"fortsnap", 1.6f},/* bascule des crans forts, fraction de la demi-largeur */
   {"fortclic", 0},   /* impulsion en arrivant sur un cran fort, V */
+  {"fortclicms", 1.0f},/* duree de chaque phase de cette impulsion, ms : la
+                    * tension plafonne a umax, l'energie se regle par ici */
 };
 #define PV(i) par[i].val
 
@@ -432,6 +434,7 @@ static bool estFort(int32_t c)
 }
 
 static float clicAmp = 0;           /* amplitude de l'impulsion en cours */
+static int16_t clicMoitie = 1;      /* echantillons par phase de l'impulsion */
 
 static float loiCrans(float rel, float v, uint8_t& fl)
 {
@@ -447,9 +450,12 @@ static float loiCrans(float rel, float v, uint8_t& fl)
   if (e > bascule && (nb == 0 || cran < cMax)) { cran++; fl |= 0x80; clicSens = 1; }
   else if (e < -bascule && (nb == 0 || cran > cMin)) { cran--; fl |= 0x80; clicSens = -1; }
   if (fl & 0x80) {
-    clicAmp = estFort(cran) && PV(P_FORTCLIC) > 0 ? PV(P_FORTCLIC) : PV(P_CLIC);
-    if (clicAmp > 0)
-      clicN = (int16_t)(2.0f * PV(P_CLICMS) * 1e-3f / (PV(P_PER) * 1e-6f) + 0.5f);
+    bool fort = estFort(cran) && PV(P_FORTCLIC) > 0;
+    clicAmp = fort ? PV(P_FORTCLIC) : PV(P_CLIC);
+    clicMoitie = (int16_t)((fort ? PV(P_FORTCLICMS) : PV(P_CLICMS)) * 1e-3f
+                           / (PV(P_PER) * 1e-6f) + 0.5f);
+    if (clicMoitie < 1) clicMoitie = 1;
+    if (clicAmp > 0) clicN = 2 * clicMoitie;
   }
   e = rel - cran * w;
 
@@ -769,8 +775,7 @@ void loop()
   }
   if (clicN > 0 && mode >= 6) {
     /* premiere moitie : dans le sens du passage ; seconde : a l'inverse */
-    int16_t moitie = (int16_t)(PV(P_CLICMS) * 1e-3f / (PV(P_PER) * 1e-6f) + 0.5f);
-    u += (clicN > moitie ? 1 : -1) * clicSens * clicAmp;
+    u += (clicN > clicMoitie ? 1 : -1) * clicSens * clicAmp;
     clicN--;
   }
   if (PV(P_COG) != 0 && (mode == 2 || mode >= 5))
