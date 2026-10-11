@@ -3,6 +3,11 @@
 Boîtier de commande manuelle (MPG + boutons + potentiomètre) relié au Raspberry Pi
 par **USB natif**, exposé dans HAL par un composant userspace.
 
+Évolution prévue — remplacer le MPG mécanique par un **volant haptique
+brushless** (moteur gimbal à moyeu creux + écran rond dans l'axe) : matériel,
+brochage du capteur MT6701, partage du bus SPI et budget de broches dans
+[`../docs/haptic_knob_hardware.md`](../docs/haptic_knob_hardware.md).
+
 ## Choix de la carte
 
 | | Pro Micro (ATmega32U4) | **UNO R4 Minima (RA4M1)** ← recommandée |
