@@ -16,6 +16,12 @@ if lsusb -d 2341:006d >/dev/null 2>&1; then
   python3 -c "
 import serial,time
 s=serial.Serial('${PORT}',2000000,timeout=0.2); s.write(b'stream 0\nmode 0\n'); time.sleep(0.1); s.write(b'boot\n'); time.sleep(0.2); s.close()" || true
+  # L'aiguillage passe de l'USB du RA4M1 a celui de l'ESP32 SANS coupure
+  # visible : le PC garde l'ancien peripherique (mesure). On force la
+  # reenumeration en desactivant/reactivant le port du Pi.
+  sleep 0.5
+  P=/sys/bus/usb/devices/1-0:1.0/usb1-port1/disable
+  echo 1 | sudo -n tee $P >/dev/null; sleep 1.5; echo 0 | sudo -n tee $P >/dev/null
   for i in $(seq 1 50); do lsusb -d 2341:1002 >/dev/null 2>&1 && break; sleep 0.2; done
   if ! lsusb -d 2341:1002 >/dev/null 2>&1; then
     # SURTOUT ne pas lancer l'upload : sur le port natif, arduino-cli ferait
