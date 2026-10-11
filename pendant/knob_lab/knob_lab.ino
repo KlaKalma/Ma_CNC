@@ -23,6 +23,16 @@
  * ================================================================== */
 #include <SimpleFOC.h>
 #include <Wire.h>
+#include <WDT.h>
+
+/* FIL D'ARIANE : survit a un reset (section .noinit). Chaque etape de la
+ * boucle y ecrit son numero ; si le chien de garde redemarre la carte, le
+ * setup() suivant dit OU elle etait bloquee. */
+static volatile uint32_t ariane     __attribute__((section(".noinit")));
+static volatile uint32_t arianeMode __attribute__((section(".noinit")));
+static volatile uint32_t arianeN    __attribute__((section(".noinit")));
+static volatile uint32_t arianeMagic __attribute__((section(".noinit")));
+#define ICI(x) (ariane = (x))
 
 BLDCDriver6PWM driver(5, 3, 9, 6, 11, 10);    /* UH UL VH VL WH WL */
 static const uint8_t BRIDGE_PIN[6] = { 3, 5, 6, 9, 10, 11 };
@@ -41,7 +51,7 @@ enum {
   P_K, P_D, P_NV, P_TAU, P_THR, P_UMAX, P_SENS, P_ZEA, P_VMAX, P_VR,
   P_IT, P_IA, P_IF, P_F1, P_F2, P_IDUR, P_IHOLD,
   P_W, P_DZ, P_SNAP, P_KD, P_NBC, P_KMUR, P_VZ,
-  P_I2C, P_RBIT, P_CIBLE, NPAR
+  P_I2C, P_RBIT, P_CIBLE, P_LIEN, P_VTEST, NPAR
 };
 static Par par[NPAR] = {
   {"mode", 0},     /* 0 pont coupe  1 Uq=0  2 couple  3 vecteur fixe
@@ -83,6 +93,10 @@ static Par par[NPAR] = {
                     * ne sont pas nuls (signature d'une trame corrompue) */
   {"cible", 0},    /* mode 5 : position visee, rad depuis le zero ; la
                     * consigne y va a vr rad/s (vr = 0 : saut) */
+  {"lien", 1.5f},  /* modes d'essai 2/3/4 : pont coupe si l'hote se tait
+                    * plus de 'lien' s (0 = jamais). Le pont USB peut se
+                    * figer moteur en marche : mesure le 2026-10-11. */
+  {"vtest", 30},   /* modes 2/4 : couple coupe au-dela, rad/s */
 };
 #define PV(i) par[i].val
 
@@ -96,6 +110,7 @@ class TxtBuf : public Print {
   uint8_t b[200]; uint8_t n = 0;
   size_t write(uint8_t c) override { if (n < sizeof(b)) b[n++] = c; return 1; }
   void envoie() {
+    ICI(20);
     uint8_t h[2] = { 0x5A, n }, x = 0;
     for (uint8_t i = 0; i < n; i++) x ^= b[i];
     Serial.write(h, 2); Serial.write(b, n); Serial.write(&x, 1);
@@ -123,6 +138,9 @@ static void debloqueBus()
   pinMode(A5, INPUT);
   Wire.begin();
   Wire.setClock((uint32_t)(PV(P_I2C) * 1000.0f));
+  /* 1 ms au lieu des 100 ms par defaut : une transaction normale dure
+   * 170 us, et pendant un timeout le moteur garde sa derniere tension. */
+  Wire.setWireTimeout(1000);
 }
 
 static uint8_t lisMot(uint16_t& mot)
@@ -295,10 +313,13 @@ static void execute(char* l)
   txt.print(F("#? ")); txt.print(l); txt.envoie();
 }
 
+static uint32_t dernierOctet = 0;     /* millis() du dernier octet recu */
+
 static void lisCommandes()
 {
   while (Serial.available()) {
     char c = Serial.read();
+    dernierOctet = millis();
     if (c == '\n' || c == '\r') {
       if (nl) { ligne[nl] = 0; execute(ligne); nl = 0; }
     } else if (nl < sizeof(ligne) - 1) ligne[nl++] = c;
@@ -312,8 +333,25 @@ void setup()
     pinMode(BRIDGE_PIN[i], OUTPUT); digitalWrite(BRIDGE_PIN[i], LOW);
   }
   pinMode(PIN_DIAG, INPUT_PULLUP);
+  pinMode(LED_BUILTIN, OUTPUT);       /* battement de coeur : 1 Hz = RA4M1 vivant */
   Serial.begin(2000000);
   delay(300);
+
+  bool parWdt = R_SYSTEM->RSTSR1_b.WDTRF;
+  uint32_t rst0 = R_SYSTEM->RSTSR0, rst1 = R_SYSTEM->RSTSR1;
+  if (arianeMagic == 0xC0FFEE42) {
+    txt.print(F("# reset precedent : etape=")); txt.print(ariane);
+    txt.print(F(" mode=")); txt.print(arianeMode);
+    txt.print(F(" n=")); txt.print(arianeN);
+    txt.print(F(" wdt=")); txt.print(parWdt);
+    txt.print(F(" RSTSR0=0x")); txt.print(rst0, HEX);
+    txt.print(F(" RSTSR1=0x")); txt.print(rst1, HEX);
+    txt.envoie();
+  }
+  R_SYSTEM->PRCR = 0xA502;            /* deverrouille les registres de reset */
+  R_SYSTEM->RSTSR1 = 0; R_SYSTEM->RSTSR0 = 0;
+  R_SYSTEM->PRCR = 0xA500;
+  arianeMagic = 0xC0FFEE42; ariane = 0; arianeN = 0;
 
   debloqueBus();
   driver.voltage_power_supply = VDC;
@@ -328,11 +366,15 @@ void setup()
   for (uint8_t i = 0; i < NH; i++) { histAcc[i] = acc; histT[i] = micros(); }
   zero();
   txt.print(F("# knob_lab pret")); txt.envoie();
+  WDT.begin(250);                     /* boucle figee 250 ms -> reset */
 }
 
 void loop()
 {
   static uint32_t tProchain = micros(), tPrec = micros();
+  WDT.refresh();
+  digitalWrite(LED_BUILTIN, (millis() >> 9) & 1);
+  ICI(1);
   lisCommandes();
 
   uint32_t per = (uint32_t)PV(P_PER);
@@ -346,14 +388,17 @@ void loop()
   uint8_t fl = 0;
 
   /* ---- capteur ---- */
+  arianeN = n; arianeMode = (uint32_t)PV(P_MODE);
+  ICI(2);
   uint16_t mot = 0;
   uint8_t err = lisMot(mot);
+  ICI(3);
   uint16_t raw14 = raw14Prec;
   if (!err && PV(P_RBIT) > 0 && (mot & 0x03)) err = 3;
   if (!err && ((mot >> 2) == 0x3FFF || (mot >> 2) == 0)) err = 4;
   if (err) {
     fl |= 0x01;
-    if (err <= 2 && ++nErr >= 2) { debloqueBus(); nErr = 0; }
+    if (err <= 2 && ++nErr >= 2) { ICI(4); debloqueBus(); nErr = 0; ICI(5); }
   } else {
     nErr = 0;
     uint16_t r = mot >> 2;
@@ -383,6 +428,11 @@ void loop()
 
   /* ---- loi ---- */
   int mode = (int)PV(P_MODE);
+  if ((mode >= 2 && mode <= 4) && PV(P_LIEN) > 0 &&
+      millis() - dernierOctet > (uint32_t)(PV(P_LIEN) * 1000.0f)) {
+    par[P_MODE].val = 0; mode = 0;
+    txt.print(F("# liaison perdue : pont coupe")); txt.envoie();
+  }
   if (mode != modePrec) {
     if (mode == 0) { driver.disable(); pontActif = false; }
     else if (!pontActif) { driver.enable(); pontActif = true; }
@@ -410,8 +460,15 @@ void loop()
   if (u > PV(P_UMAX))  { u = PV(P_UMAX);  fl |= 0x20; }
   if (u < -PV(P_UMAX)) { u = -PV(P_UMAX); fl |= 0x20; }
 
+  ICI(6);
+  bool trop = fabsf(vitF) > PV(P_VTEST);
+  if (mode == 2 && trop) { u = 0; fl |= 0x40; }
   if (mode == 3)      { vecteur(PV(P_MAG), PV(P_ANG)); u = PV(P_MAG); }
-  else if (mode == 4) { vecteur(PV(P_MAG), PP * mecanique(raw14) + PV(P_DLT)); u = PV(P_MAG); }
+  else if (mode == 4) {
+    float m = trop ? 0.0f : PV(P_MAG);
+    if (trop) fl |= 0x40;
+    vecteur(m, PP * mecanique(raw14) + PV(P_DLT)); u = m;
+  }
   else if (mode >= 1) applique(u, raw14);
 
   if (pontActif) fl |= 0x04;
@@ -434,6 +491,8 @@ void loop()
     uint8_t x = 0;
     for (uint8_t i = 1; i < 11; i++) x ^= f[i];
     f[11] = x;
+    ICI(7);
     Serial.write(f, 12);
+    ICI(8);
   }
 }

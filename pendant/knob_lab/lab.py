@@ -163,7 +163,7 @@ class Lab:
         self.set(stream=1)
         if go:
             self.go()
-        time.sleep(duree)
+        self.vie(duree)
         self.set(stream=0)
         time.sleep(0.05)
         self.recording = False
@@ -172,6 +172,17 @@ class Lab:
         if nom:
             sauve(r, nom)
         return r
+
+    def vie(self, duree):
+        """Attend en envoyant un octet de vie toutes les 0,3 s : sans lui, le
+        firmware coupe le pont des modes d'essai (parametre 'lien')."""
+        t1 = time.time() + duree
+        while True:
+            r = t1 - time.time()
+            if r <= 0:
+                return
+            time.sleep(min(0.3, r))
+            self.s.write(b'\n')
 
     def report(self, r, fichier, titre=''):
         return report(r, fichier, titre)
