@@ -25,6 +25,33 @@
 #include <Wire.h>
 #include <WDT.h>
 
+/* LIAISON PC. USB_NATIF = 1 : l'aiguillage de la R4 WiFi (P408, broche 21)
+ * branche le connecteur USB sur l'USB NATIF du RA4M1 et l'ESP32 sort du
+ * chemin. Raison, mesuree (e06/e07) : le pont USB de l'ESP32 se fige quand
+ * le PC ecrit pendant que la carte streame, et l'UART a 2 Mbaud perd des
+ * octets recus. L'USB natif a son propre controle de flux et pas d'UART.
+ * Au reset, P408 retombe : l'ESP32 reprend la main, le flash reste normal.
+ * USB_NATIF = 0 : Serial via l'ESP32 a 2 Mbaud (ancien chemin). */
+#define USB_NATIF 1
+#if USB_NATIF
+#include "usb/SerialUSB.h"
+void __USBStart();
+#define LIEN SerialUSB
+#else
+#define LIEN Serial
+#endif
+static uint32_t tramesPerdues = 0;   /* tampon USB plein : trame abandonnee */
+
+/* N'ecrit QUE si tout tient : jamais d'attente dans la boucle. */
+static bool ecrit(const uint8_t* b, size_t n)
+{
+#if USB_NATIF
+  if (LIEN.availableForWrite() < (int)n) { tramesPerdues++; return false; }
+#endif
+  LIEN.write(b, n);
+  return true;
+}
+
 /* FIL D'ARIANE : survit a un reset (section .noinit). Chaque etape de la
  * boucle y ecrit son numero ; si le chien de garde redemarre la carte, le
  * setup() suivant dit OU elle etait bloquee. */
@@ -71,8 +98,9 @@ static Par par[NPAR] = {
   {"thr", 0},      /* rejet des lectures a plus de thr LSB de la prediction
                     * (0 = aucun rejet) */
   {"umax", 2.2f},  /* plafond de |u|, V */
-  {"sens", -1},    /* signe : Uq = sens * u */
-  {"zea", 3.47f},  /* calage electrique, rad */
+  {"sens", 1},     /* signe : Uq = sens * u (mesure e02) */
+  {"zea", 0.310f}, /* calage electrique, rad (mesure e02 : 0,3099 ;
+                    * l ancien 3,47 avec sens -1 equivaut a 0,328) */
   {"vmax", 60},    /* couple coupe au-dela, rad/s */
   {"vr", 0},       /* mode 5 : consigne qui avance a vr rad/s */
   {"it", 0},       /* injection : 0 rien 1 echelon 2 sinus 3 chirp 4 PRBS */
@@ -119,7 +147,9 @@ class TxtBuf : public Print {
     ICI(20);
     uint8_t h[2] = { 0x5A, n }, x = 0;
     for (uint8_t i = 0; i < n; i++) x ^= b[i];
-    Serial.write(h, 2); Serial.write(b, n); Serial.write(&x, 1);
+    uint8_t t[204];
+    t[0] = h[0]; t[1] = h[1]; memcpy(t + 2, b, n); t[2 + n] = x;
+    ecrit(t, n + 3);
     n = 0;
   }
 };
@@ -308,9 +338,12 @@ static void execute(char* l)
   if (!strncmp(l, "rec ", 4)) {
     /* enregistrement de N echantillons, qui S'ARRETE SEUL : l'hote n'a
      * plus rien a ecrire pendant le flux. Demarre aussi l'injection. */
+    /* accuse AVANT le flux : l'hote n'ecrit qu'apres l'avoir recu, et
+     * renvoie la commande s'il ne vient pas (un octet perdu a 2 Mbaud) */
+    txt.print(F("# rec ")); txt.print(atol(l + 4)); txt.envoie();
     recReste = (uint32_t)atol(l + 4); recK = 0;
     nInj = 0; phInj = 0; lfsr = 0xACE1;
-    return;                           /* pas d'accuse : le flux en tient lieu */
+    return;
   }
   if (!strcmp(l, "z"))  { zero(); txt.print(F("# zero")); txt.envoie(); return; }
   char* sp = strchr(l, ' ');
@@ -332,8 +365,8 @@ static uint32_t dernierOctet = 0;     /* millis() du dernier octet recu */
 
 static void lisCommandes()
 {
-  while (Serial.available()) {
-    char c = Serial.read();
+  while (LIEN.available()) {
+    char c = LIEN.read();
     dernierOctet = millis();
     if (c == '\n' || c == '\r') {
       if (nl) { ligne[nl] = 0; execute(ligne); nl = 0; }
@@ -349,7 +382,10 @@ void setup()
   }
   pinMode(PIN_DIAG, INPUT_PULLUP);
   pinMode(LED_BUILTIN, OUTPUT);       /* battement de coeur : 1 Hz = RA4M1 vivant */
-  Serial.begin(2000000);
+#if USB_NATIF
+  __USBStart();
+#endif
+  LIEN.begin(2000000);
   delay(300);
 
   bool parWdt = R_SYSTEM->RSTSR1_b.WDTRF;
@@ -521,7 +557,7 @@ void loop()
     for (uint8_t i = 1; i < 11; i++) x ^= f[i];
     f[11] = x;
     ICI(7);
-    Serial.write(f, 12);
+    ecrit(f, 12);
     ICI(8);
   }
 }

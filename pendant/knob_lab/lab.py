@@ -182,7 +182,19 @@ class Lab:
             self.txt.clear()
         self.frames = []
         self.recording = True
-        self.s.write(f'rec {n}\n'.encode())
+        for essai in range(4):
+            self.s.write(f'rec {n}\n'.encode())
+            t1 = time.time() + 0.15
+            parti = False
+            while time.time() < t1 and not parti:
+                time.sleep(0.005)
+                with self.lock:
+                    parti = any(t.startswith('# rec ') and 'fin' not in t
+                                for t in self.txt)
+            if parti:
+                break
+        else:
+            raise RuntimeError('rec : pas d accuse')
         t1 = time.time() + duree + 2.0
         fini = False
         while time.time() < t1 and not fini:
