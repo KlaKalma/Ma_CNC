@@ -12,15 +12,16 @@
  *   Ecran GC9A01, SPI1 : SCK PA5, MOSI PA7, CS PA4, DC PB0, RST PB1
  *   Molette, TIM2 : A PA0, B PA1
  *
- * A l'ecran : A angle, M molette en crans, C cran du moteur, E erreurs CRC.
- * Avec reglage_molette a 1, la molette regle l'amortissement et la ligne D (en
- * mV.s/rad) remplace la ligne A.
+ * La molette change de mode tous les 5 crans : axe, menu, interrupteur, retour au
+ * centre, broche, butees, libre, debug (A angle, M molette, C cran, E erreurs CRC). Au bord de
+ * l'ecran, un point suit le moteur.
  *
- * Pilotage par le debogueur : ecrire duree_s puis commande.
+ * Pilotage par le debogueur : ecrire duree_s (0 = sans limite) puis commande.
  *   1 calage, 2 cogging, 3 calage + cogging (moteur libre, sans y toucher)
  *   10 menu (30 crans), 11 molette (100 crans), 13 interrupteur,
- *   14 retour au centre, 15 borne, 16 libre, 99 coupure
+ *   14 retour au centre, 15 borne, 16 libre, 17 broche, 99 coupure
  *
+ * Au demarrage, le moteur s'active seul si la calibration est en flash.
  * Coupure : a la fin de duree_s, si DIAG monte, si le capteur ne repond plus
  * pendant 10 ms, sur faute du processeur et a l'arret du debogueur.
  * La calibration complete est rangee dans la derniere page de la flash et relue au
@@ -31,6 +32,7 @@
 #include <math.h>
 #include <stddef.h>
 #include <string.h>
+#include "police.h"
 
 #define NB_PWM 6
 
@@ -72,6 +74,11 @@ static const SortiePwm SORTIES[NB_PWM] = {
 #define DEG         (PI_F / 180.0f)
 #define PAIRES      7
 #define PENTE_NOM   9.5f
+#define PENTE_GENOU 10.0f
+
+#define BROCHE_MIN     200
+#define BROCHE_SEUIL   2000             /* pas de 100 en dessous, de 1000 au-dessus */
+#define BROCHE_MAX     18000
 #define NB_HIST     64U
 #define NB_SIN      1024U
 #define MAX_CRC_SUITE 500U              /* 10 ms sans lecture valide */
@@ -80,10 +87,10 @@ static const SortiePwm SORTIES[NB_PWM] = {
 
 #define LARGEUR 240
 #define HAUTEUR 240
-#define NOIR    0x0000
-#define ECHELLE 4
-#define CAR_L   (6 * ECHELLE)
-#define CAR_H   (7 * ECHELLE)
+#define ZONE    150                     /* carre central, a l'interieur de l'anneau */
+#define ZONE_X0 ((LARGEUR - ZONE) / 2)
+#define ANNEAU_R 113.0f
+#define POINT_R  6.5f
 
 /* Derniere page de la banque 2 (flash en double banque, pages de 2 Ko). */
 #define CALIB_ADRESSE 0x0807F800U
@@ -98,6 +105,7 @@ typedef struct {
   int32_t nb_crans;    /* 0 = rotation infinie */
   float   mur;         /* V/rad au-dela de la plage */
   float   amorti;      /* V.s/rad */
+  float   genou;       /* V, atteints vite pres du cran pour vaincre les frottements ; 0 = rien */
   float   clic;        /* V, impulsion biphasique au passage */
   float   clic_ms;
   int32_t fort_n;      /* un cran fort tous les fort_n */
@@ -110,14 +118,12 @@ typedef enum { M_COUPE, M_LOI, M_RESSORT, M_VECTEUR } Mode;
 
 /* --- Reglages modifiables par le debogueur (float : ecrits en 32 bits bruts) --- */
 volatile uint32_t commande = 0;
-volatile uint32_t duree_s = 60;
+volatile uint32_t duree_s = 0;         /* 0 = sans limite */
 volatile uint32_t mesure_raz = 0;
 volatile uint32_t reglage_nv = 50;     /* base de vitesse : 50 x 20 us = 1 ms */
 volatile float    reglage_u_max = 2.2f;
 volatile float    reglage_pente_max = 10.0f;
 volatile float    reglage_amorti = -1.0f;   /* >= 0 : remplace l'amorti du profil */
-volatile uint32_t reglage_molette = 0;      /* 1 : la molette regle l'amortissement */
-volatile int32_t  amorti_milli = 10;        /* mV.s/rad, un cran de molette = 1 */
 volatile float    v_max = 60.0f;
 volatile float    vdc = 4.6f;          /* apres la diode de la carte, estime */
 
@@ -152,6 +158,12 @@ volatile uint32_t calib_sauvee = 0;
 volatile int32_t  molette = 0;
 volatile int32_t  molette_crans = 0;
 volatile uint32_t affichage_us = 0;
+volatile uint32_t affichage_us_max = 0;
+volatile uint32_t mode_ui = 0;
+volatile int32_t  mode_ecart = 0;      /* decale le mode choisi a la molette */
+volatile int32_t  ecran_sens = -1;     /* sens du moteur vu depuis l'ecran */
+volatile int32_t  axe_um = 0;          /* position de l'axe, fournie plus tard par LinuxCNC */
+volatile int32_t  broche_tr_min = BROCHE_MIN;
 
 volatile uint32_t mesure_n = 0;
 volatile int32_t  mesure_u_rms_uv = 0;
@@ -178,6 +190,7 @@ static volatile float k_res_ = 0.0f, d_res_ = 0.0f, consigne_ = 0.0f;
 static volatile float vec_mag_ = 0.0f, vec_dlt_ = 0.0f;
 static int16_t cog_[512];
 static volatile uint32_t cog_actif_ = 0;
+static volatile int32_t sens_sans_clic_ = 0;   /* pas de vibration vers une limite atteinte */
 static int mesure_premier_ = 1;
 static float mesure_somme_u2_ = 0.0f;
 static int32_t mesure_min_ = 0, mesure_max_ = 0;
@@ -427,7 +440,7 @@ static float loi(void)
   if (evt) {
     mesure_crans++;
     const int fort = est_fort(cran_) && p_.fort_clic > 0.0f;  /* cran d'ARRIVEE */
-    clic_amp_ = fort ? p_.fort_clic : p_.clic;
+    clic_amp_ = (clic_sens_ == sens_sans_clic_) ? 0.0f : fort ? p_.fort_clic : p_.clic;
     if (clic_amp_ > 0.0f) {
       clic_moitie_ = (int32_t)((fort ? p_.fort_clic_ms : p_.clic_ms) * 1e-3f / TS + 0.5f);
       if (clic_moitie_ < 1) {
@@ -446,7 +459,12 @@ static float loi(void)
     u = (e > 0.0f) ? -f : f;
   } else {
     const float a = fabsf(e) - p_.zone_morte;
-    const float f = (a > 0.0f) ? pente_ * a : 0.0f;
+    float f = (a > 0.0f) ? pente_ * a : 0.0f;
+    if (a > 0.0f && p_.genou > 0.0f) {
+      const float g = PENTE_GENOU * a;
+      const float h = (g < p_.genou) ? g : p_.genou;
+      f = (h > f) ? h : f;
+    }
     u = (e > 0.0f) ? -f : f;
   }
   return u + d_terme;
@@ -818,35 +836,14 @@ static void init_molette(void)
 
 /* --- Ecran -------------------------------------------------------------- */
 
-static uint8_t ligne_[LARGEUR * 2];
-
-/* Police 5x7, un octet par rangee. */
-static const uint8_t CHIFFRES[10][7] = {
-  { 0x0E,0x11,0x11,0x11,0x11,0x11,0x0E },
-  { 0x04,0x0C,0x04,0x04,0x04,0x04,0x0E },
-  { 0x0E,0x11,0x01,0x02,0x04,0x08,0x1F },
-  { 0x0E,0x11,0x01,0x06,0x01,0x11,0x0E },
-  { 0x02,0x06,0x0A,0x12,0x1F,0x02,0x02 },
-  { 0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E },
-  { 0x06,0x08,0x10,0x1E,0x11,0x11,0x0E },
-  { 0x1F,0x01,0x02,0x04,0x04,0x08,0x08 },
-  { 0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E },
-  { 0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C },
-};
-static const uint8_t L_A[7]     = { 0x0E,0x11,0x11,0x1F,0x11,0x11,0x11 };
-static const uint8_t L_M[7]     = { 0x11,0x1B,0x15,0x15,0x11,0x11,0x11 };
-static const uint8_t L_C[7]     = { 0x0E,0x11,0x10,0x10,0x10,0x11,0x0E };
-static const uint8_t L_E[7]     = { 0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F };
-static const uint8_t L_D[7]     = { 0x1E,0x11,0x11,0x11,0x11,0x11,0x1E };
-static const uint8_t L_MOINS[7] = { 0x00,0x00,0x00,0x1F,0x00,0x00,0x00 };
-static const uint8_t L_VIDE[7]  = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
+static uint16_t ligne_[LARGEUR];
 
 /* Sequence d'initialisation usuelle du GC9A01 : commande, nombre d'octets, octets. */
 static const uint8_t INIT_GC9A01[] = {
   0xEF,0, 0xEB,1,0x14, 0xFE,0, 0xEF,0, 0xEB,1,0x14,
   0x84,1,0x40, 0x85,1,0xFF, 0x86,1,0xFF, 0x87,1,0xFF, 0x88,1,0x0A, 0x89,1,0x21,
   0x8A,1,0x00, 0x8B,1,0x80, 0x8C,1,0x01, 0x8D,1,0x01, 0x8E,1,0xFF, 0x8F,1,0xFF,
-  0xB6,2,0x00,0x00, 0x36,1,0x08, 0x3A,1,0x05, 0x90,4,0x08,0x08,0x08,0x08,
+  0xB6,2,0x00,0x00, 0x36,1,0x48, 0x3A,1,0x05, 0x90,4,0x08,0x08,0x08,0x08,
   0xBD,1,0x06, 0xBC,1,0x00, 0xFF,3,0x60,0x01,0x04, 0xC3,1,0x13, 0xC4,1,0x13,
   0xC9,1,0x22, 0xBE,1,0x11, 0xE1,2,0x10,0x0E, 0xDF,3,0x21,0x0C,0x02,
   0xF0,6,0x45,0x09,0x08,0x08,0x26,0x2A, 0xF1,6,0x43,0x70,0x72,0x36,0x37,0x6F,
@@ -927,19 +924,6 @@ static void ouvrir_zone(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
   DC_PORT->BSRR = DC_PIN;
 }
 
-static void remplir(uint16_t couleur)
-{
-  for (uint32_t i = 0; i < LARGEUR; i++) {
-    ligne_[2 * i] = (uint8_t)(couleur >> 8);
-    ligne_[2 * i + 1] = (uint8_t)couleur;
-  }
-  ouvrir_zone(0, 0, LARGEUR - 1, HAUTEUR - 1);
-  for (uint32_t y = 0; y < HAUTEUR; y++) {
-    envoi_dma(ligne_, sizeof(ligne_));
-  }
-  CS_PORT->BSRR = CS_PIN;
-}
-
 static void init_ecran(void)
 {
   __HAL_RCC_SPI1_CLK_ENABLE();
@@ -983,50 +967,6 @@ static void init_ecran(void)
   HAL_Delay(20);
 
   config_ecran_spi(0);
-  remplir(NOIR);
-}
-
-static void dessiner_car(uint16_t x, uint16_t y, const uint8_t *g)
-{
-  static uint8_t buf[CAR_L * CAR_H * 2];
-  uint32_t i = 0;
-  for (uint32_t r = 0; r < 7; r++) {
-    for (uint32_t e = 0; e < ECHELLE; e++) {
-      for (uint32_t c = 0; c < 6; c++) {
-        uint8_t v = (c < 5 && (g[r] & (0x10U >> c))) ? 0xFF : 0x00;
-        for (uint32_t s = 0; s < ECHELLE; s++) {
-          buf[i++] = v;
-          buf[i++] = v;
-        }
-      }
-    }
-  }
-  ouvrir_zone(x, y, (uint16_t)(x + CAR_L - 1), (uint16_t)(y + CAR_H - 1));
-  envoi_dma(buf, sizeof(buf));
-  CS_PORT->BSRR = CS_PIN;
-}
-
-/* Une ligne : lettre, puis nombre cale a droite sur 6 positions. */
-static void dessiner_ligne(uint16_t y, const uint8_t *lettre, int32_t v)
-{
-  const uint16_t x0 = 36;
-  dessiner_car(x0, y, lettre);
-
-  uint32_t u = (v < 0) ? (uint32_t)(-v) : (uint32_t)v;
-  int pos = 6;
-  do {
-    dessiner_car((uint16_t)(x0 + pos * CAR_L), y, CHIFFRES[u % 10U]);
-    u /= 10U;
-    pos--;
-  } while (u && pos > 0);
-  if (v < 0 && pos > 0) {
-    dessiner_car((uint16_t)(x0 + pos * CAR_L), y, L_MOINS);
-    pos--;
-  }
-  while (pos > 0) {
-    dessiner_car((uint16_t)(x0 + pos * CAR_L), y, L_VIDE);
-    pos--;
-  }
 }
 
 /* --- Profils, identiques a HKProfils.cpp -------------------------------- */
@@ -1089,6 +1029,7 @@ static Profil profil_crans(int parTour, float force, float clic)
 static Profil profil_retour_centre(float course_deg, float mur)
 {
   Profil p = profil_base();
+  p.genou = 0.4f;
   p.largeur = 2.0f * course_deg * DEG;
   p.zone_morte = 0.5f * DEG;
   p.nb_crans = 1;
@@ -1148,10 +1089,12 @@ static void executer(uint32_t c, uint32_t *fin)
     case 13:
       p = profil_borne(2, 90.0f, 1.6f, 8.0f, 2.2f);
       p.clic_ms = 1.5f;
+      p.genou = 0.4f;
       break;
     case 14: p = profil_retour_centre(30.0f, 8.0f); break;
     case 15: p = profil_borne(10, 54.0f, 1.05f, 8.0f, 1.5f); break;
     case 16: p = profil_base(); break;
+    case 17: p = profil_crans(24, 0.0f, 1.0f); break;
     default:
       mode_ = M_COUPE;
       phase = 0;
@@ -1159,10 +1102,500 @@ static void executer(uint32_t c, uint32_t *fin)
       return;
   }
   profil_actuel = c;
-  amorti_milli = (int32_t)lroundf(p.amorti * 1000.0f);
-  reglage_amorti = -1.0f;
   charger_profil(&p);
-  *fin = HAL_GetTick() + duree_s * 1000U;
+  *fin = duree_s ? HAL_GetTick() + duree_s * 1000U : 0U;
+}
+
+/* --- Interface ----------------------------------------------------------- */
+
+typedef enum { E_AXE, E_MENU, E_INTER, E_RETOUR, E_BROCHE, E_BUTEES, E_LIBRE, E_DEBUG } Ecran;
+
+typedef struct {
+  uint32_t commande;
+  const char *nom;
+  const char *detail;
+  uint8_t r, g, b;
+  float arc_deg;     /* course dessinee sur l'anneau, de part et d'autre du haut ; 0 = aucune */
+  float centre_deg;  /* angle moteur, depuis le chargement du mode, place en haut de l'ecran */
+} ModeUi;
+
+/* Meme ordre que Ecran. */
+static const ModeUi MODES[] = {
+  { 11, "Axe",            "",               255,  90,  70,  0.0f,  0.0f },
+  { 10, "Menu",           "",                70, 170, 255,  0.0f,  0.0f },
+  { 13, "Interrupteur",   "",               255, 190,  40, 45.0f, 45.0f },
+  { 14, "Retour centre",  "Vitesse de jog",  80, 220, 130, 30.0f,  0.0f },
+  { 17, "Broche",         "tr/min",         255, 120, 170,  0.0f,  0.0f },
+  { 15, "But\xE9" "es",   "10 crans",       200, 120, 255,  0.0f,  0.0f },
+  { 16, "Libre",          "Sans cran",      120, 220, 230,  0.0f,  0.0f },
+  { 11, "Debug",          "",               170, 170, 170,  0.0f,  0.0f },
+};
+#define NB_MODES ((int32_t)(sizeof(MODES) / sizeof(MODES[0])))
+
+static const char *const MENU[] = {
+  "Axe X", "Axe Y", "Axe Z", "Pas", "Origine", "Broche", "Arrosage", "R\xE9" "glages",
+};
+#define NB_MENU ((int32_t)(sizeof(MENU) / sizeof(MENU[0])))
+
+#define MOLETTE_PAR_MODE 5
+#define MODE_STABLE_MS   150U
+#define PAS_AXE_UM       10
+#define MENU_ECART       38.0f
+#define JOG_ZONE_MORTE   (1.5f * DEG)   /* le moteur peut s'y arreter, retenu par les frottements */
+
+static uint16_t zone_[ZONE * ZONE];
+static int32_t mode_voulu_ = 0, mode_charge_ = -1;
+static uint32_t mode_t_ = 0;
+static int32_t cran_prec_ = 0;
+static float menu_pos_ = 0.0f, menu_base_ = 0.0f;
+static uint32_t cle_zone_ = 0xFFFFFFFFU;
+static int point_force_ = 1;
+
+/* Pixel pret a envoyer : l'ecran attend l'octet de poids fort en premier. */
+static inline uint16_t pixel(uint32_t r, uint32_t g, uint32_t b)
+{
+  const uint32_t c = ((r & 0xF8U) << 8) | ((g & 0xFCU) << 3) | (b >> 3);
+  return (uint16_t)((c >> 8) | (c << 8));
+}
+
+static const Glyphe *glyphe(const Police *f, char c)
+{
+  for (uint32_t i = 0; f->codes[i]; i++) {
+    if (f->codes[i] == c) {
+      return &f->g[i];
+    }
+  }
+  return NULL;
+}
+
+static float avance(const Police *f, char c, int tab)
+{
+  if (tab && c >= '0' && c <= '9') {
+    c = '0';
+  }
+  const Glyphe *g = glyphe(f, c);
+  return g ? (float)g->av : 0.0f;
+}
+
+/* Ecrit dans zone_, centre verticalement sur yc. ancre : -1 gauche, 0 centre, 1 droite.
+ * tab : chiffres de largeur egale, pour que les valeurs ne bougent pas en changeant. */
+static void texte(const Police *f, const char *s, float x, float yc, float ech, int ancre,
+                  uint32_t r, uint32_t g, uint32_t b, int tab)
+{
+  uint16_t pal[16];
+  for (uint32_t i = 0; i < 16U; i++) {
+    pal[i] = pixel(r * i / 15U, g * i / 15U, b * i / 15U);
+  }
+  float l = 0.0f;
+  for (const char *p = s; *p; p++) {
+    l += avance(f, *p, tab);
+  }
+  l *= ech;
+  float cx = (ancre < 0) ? x : (ancre > 0) ? x - l : x - 0.5f * l;
+  const float y0 = yc - 0.5f * (float)f->hauteur * ech;
+  const float inv = 1.0f / ech;
+
+  for (const char *p = s; *p; p++) {
+    const Glyphe *gl = glyphe(f, *p);
+    if (!gl) {
+      continue;
+    }
+    const float cellule = avance(f, *p, tab);
+    const float ox = cx + ((tab && *p >= '0' && *p <= '9') ? 0.5f * (cellule - (float)gl->av) * ech : 0.0f)
+                   + (float)gl->x * ech;
+    const float oy = y0 + (float)gl->y * ech;
+    const uint8_t *d = f->d + gl->pos;
+    int ya = (int)ceilf(oy), yb = (int)ceilf(oy + (float)gl->h * ech);
+    int xa = (int)ceilf(ox), xb = (int)ceilf(ox + (float)gl->l * ech);
+    if (ya < 0) { ya = 0; }
+    if (xa < 0) { xa = 0; }
+    if (yb > ZONE) { yb = ZONE; }
+    if (xb > ZONE) { xb = ZONE; }
+    for (int py = ya; py < yb; py++) {
+      const float sy = ((float)py - oy) * inv;
+      const int iy = (int)sy;
+      const float fy = sy - (float)iy;
+      const uint8_t *l0 = d + (uint32_t)iy * gl->l;
+      const uint8_t *l1 = (iy + 1 < (int)gl->h) ? l0 + gl->l : l0;
+      for (int px = xa; px < xb; px++) {
+        const float sx = ((float)px - ox) * inv;
+        const int ix = (int)sx;
+        const float fx = sx - (float)ix;
+        const int ix1 = (ix + 1 < (int)gl->l) ? ix + 1 : ix;
+        const float h0 = (float)l0[ix] + fx * (float)(l0[ix1] - l0[ix]);
+        const float h1 = (float)l1[ix] + fx * (float)(l1[ix1] - l1[ix]);
+        const uint32_t a = (uint32_t)(h0 + fy * (h1 - h0) + 0.5f);
+        if (a) {
+          zone_[py * ZONE + px] = pal[a];
+        }
+      }
+    }
+    cx += cellule * ech;
+  }
+}
+
+static void texte_entier(int32_t v, char *b)
+{
+  char t[12];
+  int n = 0;
+  uint32_t u = (v < 0) ? (uint32_t)(-v) : (uint32_t)v;
+  do {
+    t[n++] = (char)('0' + u % 10U);
+    u /= 10U;
+  } while (u);
+  if (v < 0) {
+    *b++ = '-';
+  }
+  while (n) {
+    *b++ = t[--n];
+  }
+  *b = 0;
+}
+
+static void texte_mm(int32_t um, char *b)
+{
+  const uint32_t u = (um < 0) ? (uint32_t)(-um) : (uint32_t)um;
+  char e[12];
+  if (um < 0) {
+    *b++ = '-';
+  }
+  texte_entier((int32_t)(u / 1000U), e);
+  for (const char *p = e; *p; p++) {
+    *b++ = *p;
+  }
+  *b++ = '.';
+  *b++ = (char)('0' + (u / 100U) % 10U);
+  *b++ = (char)('0' + (u / 10U) % 10U);
+  *b++ = (char)('0' + u % 10U);
+  *b = 0;
+}
+
+static void envoyer_zone(void)
+{
+  ouvrir_zone(ZONE_X0, ZONE_X0, ZONE_X0 + ZONE - 1, ZONE_X0 + ZONE - 1);
+  envoi_dma((const uint8_t *)zone_, sizeof(zone_));
+  CS_PORT->BSRR = CS_PIN;
+}
+
+/* Redessine un rectangle de l'anneau, avec le point a sa position actuelle. */
+static void anneau_rect(int x0, int y0, int x1, int y1, float px, float py, const ModeUi *m)
+{
+  if (x0 < 0) { x0 = 0; }
+  if (y0 < 0) { y0 = 0; }
+  if (x1 >= LARGEUR) { x1 = LARGEUR - 1; }
+  if (y1 >= HAUTEUR) { y1 = HAUTEUR - 1; }
+  ouvrir_zone((uint16_t)x0, (uint16_t)y0, (uint16_t)x1, (uint16_t)y1);
+  const float r_min = (ANNEAU_R - 2.0f) * (ANNEAU_R - 2.0f);
+  const float r_max = (ANNEAU_R + 2.0f) * (ANNEAU_R + 2.0f);
+  const float p2 = (POINT_R + 1.0f) * (POINT_R + 1.0f);
+  const float arc = m->arc_deg * DEG;
+  const float ca = cosf(arc);
+  const float bout_x = ANNEAU_R * sinf(arc);
+  const float bout_y = -ANNEAU_R * ca;
+  for (int y = y0; y <= y1; y++) {
+    const float fy = (float)y + 0.5f;
+    const float ry = fy - 120.0f;
+    for (int x = x0; x <= x1; x++) {
+      const float fx = (float)x + 0.5f;
+      const float rx = fx - 120.0f;
+      const float r2 = rx * rx + ry * ry;
+      float a = 0.0f, ad = 0.0f, am = 0.0f;
+      if (r2 > r_min && r2 < r_max) {
+        const float r = sqrtf(r2);
+        a = 1.5f - fabsf(r - ANNEAU_R);
+        a = (a < 0.0f) ? 0.0f : (a > 1.0f) ? 1.0f : a;
+        if (arc > 0.0f && -ry >= ca * r) {
+          am = a;
+        }
+      }
+      if (arc > 0.0f) {
+        const float bx = fabsf(rx) - bout_x, by = ry - bout_y;
+        const float b2 = bx * bx + by * by;
+        if (b2 < 25.0f) {
+          float ab = 4.5f - sqrtf(b2);
+          ab = (ab > 1.0f) ? 1.0f : ab;
+          am = (ab > am) ? ab : am;
+        }
+      }
+      const float dx = fx - px, dy = fy - py;
+      const float d2 = dx * dx + dy * dy;
+      if (d2 < p2) {
+        ad = POINT_R - sqrtf(d2) + 0.5f;
+        ad = (ad < 0.0f) ? 0.0f : (ad > 1.0f) ? 1.0f : ad;
+      }
+      const float fond = 70.0f * a * (1.0f - am) * (1.0f - ad);
+      const float teinte = ad + 0.6f * am * (1.0f - ad);
+      ligne_[x - x0] = pixel((uint32_t)(fond + teinte * (float)m->r),
+                             (uint32_t)(fond + teinte * (float)m->g),
+                             (uint32_t)(fond + teinte * (float)m->b));
+    }
+    envoi_dma((const uint8_t *)ligne_, (uint32_t)(x1 - x0 + 1) * 2U);
+  }
+  CS_PORT->BSRR = CS_PIN;
+}
+
+static void point_position(const ModeUi *m, float *px, float *py)
+{
+  const float tour = (float)ecran_sens * ((float)(acc_ - zero_acc_) / 16384.0f + m->centre_deg / 360.0f);
+  const float t = tour - floorf(tour);
+  *px = 120.0f + ANNEAU_R * sin_tour(t);
+  *py = 120.0f - ANNEAU_R * sin_tour(t + 0.25f);
+}
+
+static void afficher_point(const ModeUi *m)
+{
+  static float ax = 0.0f, ay = 0.0f;
+  float px, py;
+  point_position(m, &px, &py);
+  if (point_force_) {
+    /* Nouveau mode : tout l'anneau change, et la zone centrale sera redessinee. */
+    point_force_ = 0;
+    anneau_rect(0, 0, LARGEUR - 1, HAUTEUR - 1, px, py, m);
+    ax = px;
+    ay = py;
+    return;
+  }
+  if (fabsf(px - ax) < 0.2f && fabsf(py - ay) < 0.2f) {
+    return;
+  }
+  const int m_r = (int)POINT_R + 2;
+  anneau_rect((int)ax - m_r, (int)ay - m_r, (int)ax + m_r, (int)ay + m_r, px, py, m);
+  anneau_rect((int)px - m_r, (int)py - m_r, (int)px + m_r, (int)py + m_r, px, py, m);
+  ax = px;
+  ay = py;
+}
+
+static void init_interface(void)
+{
+  float px, py;
+  point_position(&MODES[0], &px, &py);
+  anneau_rect(0, 0, LARGEUR - 1, HAUTEUR - 1, px, py, &MODES[0]);
+}
+
+static void dessiner_menu(const ModeUi *m)
+{
+  memset(zone_, 0, sizeof(zone_));
+  const int32_t k0 = (int32_t)floorf(menu_pos_);
+  for (int32_t k = k0 - 2; k <= k0 + 3; k++) {
+    const float d = (float)k - menu_pos_;
+    const float ad = fabsf(d);
+    const float pres = (ad < 1.0f) ? 1.0f - ad : 0.0f;  /* 1 sur l'element choisi */
+    const float lum = 1.0f - ad / 1.7f;   /* s'eteint avant le bord de la zone */
+    if (lum <= 0.0f) {
+      continue;
+    }
+    const float ech = 0.65f + 0.35f * pres;
+    const float n = 255.0f * lum * (1.0f - pres);
+    texte(&P30, MENU[((k % NB_MENU) + NB_MENU) % NB_MENU],
+          (float)ZONE * 0.5f, (float)ZONE * 0.5f + d * MENU_ECART, ech, 0,
+          (uint32_t)(n + pres * (float)m->r), (uint32_t)(n + pres * (float)m->g),
+          (uint32_t)(n + pres * (float)m->b), 0);
+  }
+}
+
+/* OFF et ON sont ecrits du cote de leur position sur l'anneau. */
+static void dessiner_inter(const ModeUi *m, int on)
+{
+  const int off_gauche = (ecran_sens < 0);
+  memset(zone_, 0, sizeof(zone_));
+  texte(&P18, "OFF", off_gauche ? 24.0f : 126.0f, 18.0f, 1.0f, 0, on ? 90 : m->r, on ? 90 : m->g, on ? 90 : m->b, 0);
+  texte(&P18, "ON", off_gauche ? 126.0f : 24.0f, 18.0f, 1.0f, 0, on ? m->r : 90, on ? m->g : 90, on ? m->b : 90, 0);
+  texte(&P30, m->nom, 75.0f, 50.0f, 0.75f, 0, m->r, m->g, m->b, 0);
+  texte(&P30, on ? "ON" : "OFF", 75.0f, 88.0f, 1.0f, 0, 255, 255, 255, 0);
+  if (on == off_gauche) {
+    texte(&P18, on ? "< vers OFF" : "< vers ON", 75.0f, 122.0f, 1.0f, 0, 170, 170, 170, 0);
+  } else {
+    texte(&P18, on ? "vers OFF >" : "vers ON >", 75.0f, 122.0f, 1.0f, 0, 170, 170, 170, 0);
+  }
+}
+
+static void dessiner_axe(const ModeUi *m)
+{
+  char t[16];
+  memset(zone_, 0, sizeof(zone_));
+  texte(&P72, "X", 75.0f, 42.0f, 1.0f, 0, m->r, m->g, m->b, 0);
+  texte_mm(axe_um, t);
+  texte(&P30, t, 75.0f, 100.0f, 1.0f, 0, 255, 255, 255, 1);
+  texte(&P18, "mm", 75.0f, 128.0f, 1.0f, 0, 150, 150, 150, 0);
+}
+
+static void dessiner_ligne(float y, const char *lettre, int32_t v)
+{
+  char t[12];
+  texte_entier(v, t);
+  texte(&P30, lettre, 12.0f, y, 0.8f, -1, 170, 170, 170, 0);
+  texte(&P30, t, 138.0f, y, 0.8f, 1, 255, 255, 255, 1);
+}
+
+static void dessiner_debug(void)
+{
+  memset(zone_, 0, sizeof(zone_));
+  dessiner_ligne(24.0f, "A", angle_brut);
+  dessiner_ligne(58.0f, "M", molette_crans);
+  dessiner_ligne(92.0f, "C", cran);
+  dessiner_ligne(126.0f, "E", (int32_t)nb_crc_faux);
+}
+
+static void dessiner_message(const char *a, const char *b)
+{
+  memset(zone_, 0, sizeof(zone_));
+  texte(&P30, a, 75.0f, 62.0f, 0.8f, 0, 255, 255, 255, 0);
+  texte(&P18, b, 75.0f, 92.0f, 1.0f, 0, 170, 170, 170, 0);
+}
+
+static void dessiner_mode(const ModeUi *m, const char *valeur)
+{
+  memset(zone_, 0, sizeof(zone_));
+  texte(&P30, m->nom, 75.0f, 42.0f, 0.75f, 0, m->r, m->g, m->b, 0);
+  texte(&P18, m->detail, 75.0f, 68.0f, 1.0f, 0, 170, 170, 170, 0);
+  texte(&P30, valeur, 75.0f, 105.0f, 1.0f, 0, 255, 255, 255, 1);
+}
+
+/* Choisit le mode d'apres la molette. Attend qu'elle se pose pour ne pas charger
+ * tous les modes traverses quand on la tourne vite. */
+static void gerer_modes(uint32_t maintenant, uint32_t *fin)
+{
+  const int32_t c = molette_crans + MOLETTE_PAR_MODE / 2;
+  const int32_t reste = ((c % MOLETTE_PAR_MODE) + MOLETTE_PAR_MODE) % MOLETTE_PAR_MODE;
+  const int32_t q = (c - reste) / MOLETTE_PAR_MODE + mode_ecart;
+  const int32_t voulu = ((q % NB_MODES) + NB_MODES) % NB_MODES;
+  if (voulu != mode_voulu_) {
+    mode_voulu_ = voulu;
+    mode_t_ = maintenant;
+  }
+  if (voulu == mode_charge_ || maintenant - mode_t_ < MODE_STABLE_MS || !calage_ok || !cogging_ok) {
+    return;
+  }
+  if (mode_charge_ == E_MENU) {
+    menu_base_ = roundf(menu_pos_);
+  }
+  mode_charge_ = voulu;
+  mode_ui = (uint32_t)voulu;
+  const uint32_t d = duree_s;
+  duree_s = 0;
+  executer(MODES[voulu].commande, fin);
+  duree_s = d;
+  attendre_iterations(1);   /* cran repart de 0 */
+  cran_prec_ = 0;
+  sens_sans_clic_ = 0;
+  menu_pos_ = menu_base_;
+  cle_zone_ = 0xFFFFFFFFU;
+  point_force_ = 1;
+}
+
+static void afficher(uint32_t maintenant)
+{
+  const int32_t i = (mode_charge_ >= 0) ? mode_charge_ : 0;
+  const ModeUi *m = &MODES[i];
+  const int actif = (mode_charge_ >= 0) && (phase == 3U);
+  const float rel = (float)(acc_ - zero_acc_) * LSB;
+  const int32_t cr = cran;
+  char t[20];
+  uint32_t cle;
+
+  afficher_point(m);
+
+  if (!actif) {
+    const int calibre = calage_ok && cogging_ok;
+    cle = calibre ? 1U : 2U;
+    if (cle != cle_zone_) {
+      cle_zone_ = cle;
+      if (calibre) {
+        dessiner_message("Moteur coup\xE9", "Tourner la molette");
+      } else {
+        dessiner_message("Calibration", "requise");
+      }
+      envoyer_zone();
+    }
+    return;
+  }
+
+  switch ((Ecran)i) {
+    case E_AXE:
+      axe_um += ecran_sens * (cr - cran_prec_) * PAS_AXE_UM;
+      cran_prec_ = cr;
+      cle = (uint32_t)axe_um;
+      if (cle != cle_zone_) {
+        dessiner_axe(m);
+      }
+      break;
+    case E_MENU: {
+      const float cible = menu_base_ + (float)ecran_sens * rel / p_.largeur;
+      menu_pos_ += 0.4f * (cible - menu_pos_);
+      cle = (uint32_t)(int32_t)lroundf(menu_pos_ * 500.0f);
+      if (cle != cle_zone_) {
+        dessiner_menu(m);
+      }
+      break;
+    }
+    case E_INTER:
+      cle = (uint32_t)cr;
+      if (cle != cle_zone_) {
+        dessiner_inter(m, cr != 0);
+      }
+      break;
+    case E_RETOUR: {
+      /* 100 % dans la zone morte, 0 % et 200 % au debut des butees, sans limite haute. */
+      const float hors_zone = fabsf(rel) - JOG_ZONE_MORTE;
+      float j = (hors_zone > 0.0f) ? hors_zone / (0.5f * p_.largeur - JOG_ZONE_MORTE) : 0.0f;
+      int32_t pct = 100 + (int32_t)lroundf(((rel * (float)ecran_sens > 0.0f) ? 100.0f : -100.0f) * j);
+      pct = (pct < 0) ? 0 : pct;
+      cle = (uint32_t)pct;
+      if (cle != cle_zone_) {
+        texte_entier(pct, t);
+        strcat(t, " %");
+        dessiner_mode(m, t);
+      }
+      break;
+    }
+    case E_BROCHE: {
+      int32_t pas = ecran_sens * (cr - cran_prec_);
+      cran_prec_ = cr;
+      int32_t v = broche_tr_min;
+      for (; pas > 0 && v < BROCHE_MAX; pas--) {
+        v += (v < BROCHE_SEUIL) ? 100 : 1000;
+      }
+      for (; pas < 0 && v > BROCHE_MIN; pas++) {
+        v -= (v <= BROCHE_SEUIL) ? 100 : 1000;
+      }
+      broche_tr_min = v;
+      sens_sans_clic_ = (v >= BROCHE_MAX) ? ecran_sens : (v <= BROCHE_MIN) ? -ecran_sens : 0;
+      cle = (uint32_t)v;
+      if (cle != cle_zone_) {
+        texte_entier(v, t);
+        dessiner_mode(m, t);
+      }
+      break;
+    }
+    case E_BUTEES:
+      cle = (uint32_t)cr;
+      if (cle != cle_zone_) {
+        texte_entier((ecran_sens < 0) ? 5 - cr : cr + 6, t);
+        strcat(t, " / 10");
+        dessiner_mode(m, t);
+      }
+      break;
+    case E_LIBRE: {
+      const int32_t deg = (int32_t)lroundf((float)ecran_sens * rel / DEG);
+      cle = (uint32_t)deg;
+      if (cle != cle_zone_) {
+        texte_entier(deg, t);
+        strcat(t, " deg");
+        dessiner_mode(m, t);
+      }
+      break;
+    }
+    default:
+      cle = maintenant / 50U;
+      if (cle != cle_zone_) {
+        dessiner_debug();
+      }
+      break;
+  }
+  if (cle != cle_zone_) {
+    cle_zone_ = cle;
+    envoyer_zone();
+  }
 }
 
 int main(void)
@@ -1220,21 +1653,24 @@ int main(void)
   for (uint32_t i = 0; i < NB_HIST; i++) {
     hist_[i] = acc_;
   }
+  init_interface();
   init_pwm();
 
   uint32_t t_led = 0;
-  uint32_t t_texte = 0;
+  uint32_t t_ecran = 0;
   uint32_t fin = 0;
-  int32_t crans_prec = 0;
   while (1) {
     const uint32_t c = commande;
     if (c != 0U) {
       commande = 0;
       executer(c, &fin);
+      if (c <= 3U) {
+        mode_charge_ = -1;   /* recharge le mode une fois la calibration finie */
+      }
     }
 
     uint32_t maintenant = HAL_GetTick();
-    if (phase == 3U && (int32_t)(maintenant - fin) >= 0) {
+    if (phase == 3U && fin != 0U && (int32_t)(maintenant - fin) >= 0) {
       mode_ = M_COUPE;
       phase = 0;
       profil_actuel = 0;
@@ -1249,6 +1685,7 @@ int main(void)
       mesure_raz = 0;
       mesure_crans = 0;
       isr_cycles_max = 0;
+      affichage_us_max = 0;
       mesure_premier_ = 1;
       HAL_Delay(2);
     }
@@ -1266,32 +1703,17 @@ int main(void)
     molette = m;
     molette_crans = (m + ((m >= 0) ? 2 : -2)) / 4;
 
-    const int32_t dc = molette_crans - crans_prec;
-    crans_prec = molette_crans;
-    const int reglage = (reglage_molette != 0U);
-    if (reglage) {
-      int32_t a = amorti_milli + dc;
-      if (a < 0) {
-        a = 0;
-      } else if (a > AMORTI_MILLI_MAX) {
-        a = AMORTI_MILLI_MAX;
-      }
-      amorti_milli = a;
-      reglage_amorti = 0.001f * (float)a;
-    }
+    gerer_modes(maintenant, &fin);
 
-    if (maintenant - t_texte >= 50U) {
-      t_texte = maintenant;
+    if (maintenant - t_ecran >= 16U) {
+      t_ecran = maintenant;
       const uint32_t debut = DWT->CYCCNT;
-      if (reglage) {
-        dessiner_ligne(48, L_D, amorti_milli);
-      } else {
-        dessiner_ligne(48, L_A, angle_brut);
+      afficher(maintenant);
+      const uint32_t us = (DWT->CYCCNT - debut) / (SystemCoreClock / 1000000U);
+      affichage_us = us;
+      if (us > affichage_us_max) {
+        affichage_us_max = us;
       }
-      dessiner_ligne(86, L_M, molette_crans);
-      dessiner_ligne(124, L_C, cran);
-      dessiner_ligne(162, L_E, (int32_t)nb_crc_faux);
-      affichage_us = (DWT->CYCCNT - debut) / (SystemCoreClock / 1000000U);
     }
 
     if (maintenant - t_led >= 250U) {
