@@ -13,10 +13,12 @@
  *   Molette, TIM2 : A PA0, B PA1
  *
  * A l'ecran : A angle, M molette en crans, C cran du moteur, E erreurs CRC.
+ * Avec reglage_molette a 1, la molette regle l'amortissement et la ligne D (en
+ * mV.s/rad) remplace la ligne A.
  *
  * Pilotage par le debogueur : ecrire duree_s puis commande.
  *   1 calage, 2 cogging, 3 calage + cogging (moteur libre, sans y toucher)
- *   10 menu, 11 pendant 100 crans, 12 30 crans, 13 interrupteur,
+ *   10 menu (30 crans), 11 molette (100 crans), 13 interrupteur,
  *   14 retour au centre, 15 borne, 16 libre, 99 coupure
  *
  * Coupure : a la fin de duree_s, si DIAG monte, si le capteur ne repond plus
@@ -74,6 +76,7 @@ static const SortiePwm SORTIES[NB_PWM] = {
 #define NB_SIN      1024U
 #define MAX_CRC_SUITE 500U              /* 10 ms sans lecture valide */
 #define ITER_PAR_MS   50U
+#define AMORTI_MILLI_MAX 200
 
 #define LARGEUR 240
 #define HAUTEUR 240
@@ -113,6 +116,8 @@ volatile uint32_t reglage_nv = 50;     /* base de vitesse : 50 x 20 us = 1 ms */
 volatile float    reglage_u_max = 2.2f;
 volatile float    reglage_pente_max = 10.0f;
 volatile float    reglage_amorti = -1.0f;   /* >= 0 : remplace l'amorti du profil */
+volatile uint32_t reglage_molette = 0;      /* 1 : la molette regle l'amortissement */
+volatile int32_t  amorti_milli = 5;         /* mV.s/rad, un cran de molette = 1 */
 volatile float    v_max = 60.0f;
 volatile float    vdc = 4.6f;          /* apres la diode de la carte, estime */
 
@@ -447,7 +452,7 @@ static float loi(void)
   return u + d_terme;
 }
 
-/* --- Boucle a 25 kHz ---------------------------------------------------- */
+/* --- Boucle a 50 kHz ---------------------------------------------------- */
 
 void TIM1_UP_TIM16_IRQHandler(void)
 {
@@ -832,6 +837,7 @@ static const uint8_t L_A[7]     = { 0x0E,0x11,0x11,0x1F,0x11,0x11,0x11 };
 static const uint8_t L_M[7]     = { 0x11,0x1B,0x15,0x15,0x11,0x11,0x11 };
 static const uint8_t L_C[7]     = { 0x0E,0x11,0x10,0x10,0x10,0x11,0x0E };
 static const uint8_t L_E[7]     = { 0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F };
+static const uint8_t L_D[7]     = { 0x1E,0x11,0x11,0x11,0x11,0x11,0x1E };
 static const uint8_t L_MOINS[7] = { 0x00,0x00,0x00,0x1F,0x00,0x00,0x00 };
 static const uint8_t L_VIDE[7]  = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
 
@@ -1030,7 +1036,7 @@ static Profil profil_base(void)
   Profil p;
   memset(&p, 0, sizeof(p));
   p.bascule = 1.1f;
-  p.amorti = 0.045f;
+  p.amorti = 0.005f;   /* au-dessus de 35 mV.s/rad, la rotation devient lourde */
   p.clic_ms = 1.0f;
   p.fort_bascule = 1.6f;
   p.fort_clic_ms = 2.0f;
@@ -1137,9 +1143,8 @@ static void executer(uint32_t c, uint32_t *fin)
         }
       }
       return;
-    case 10: p = profil_menu(27.0f, 1.05f, 1.5f); break;
+    case 10: p = profil_crans(30, 1.4f, 0.0f); break;
     case 11: p = profil_pendant(100, 10); break;
-    case 12: p = profil_crans(30, 1.4f, 0.0f); break;
     case 13:
       p = profil_borne(2, 90.0f, 1.6f, 8.0f, 2.2f);
       p.clic_ms = 1.5f;
@@ -1218,6 +1223,7 @@ int main(void)
   uint32_t t_led = 0;
   uint32_t t_texte = 0;
   uint32_t fin = 0;
+  int32_t crans_prec = 0;
   while (1) {
     const uint32_t c = commande;
     if (c != 0U) {
@@ -1258,10 +1264,28 @@ int main(void)
     molette = m;
     molette_crans = (m + ((m >= 0) ? 2 : -2)) / 4;
 
+    const int32_t dc = molette_crans - crans_prec;
+    crans_prec = molette_crans;
+    const int reglage = (reglage_molette != 0U);
+    if (reglage) {
+      int32_t a = amorti_milli + dc;
+      if (a < 0) {
+        a = 0;
+      } else if (a > AMORTI_MILLI_MAX) {
+        a = AMORTI_MILLI_MAX;
+      }
+      amorti_milli = a;
+      reglage_amorti = 0.001f * (float)a;
+    }
+
     if (maintenant - t_texte >= 50U) {
       t_texte = maintenant;
       const uint32_t debut = DWT->CYCCNT;
-      dessiner_ligne(48, L_A, angle_brut);
+      if (reglage) {
+        dessiner_ligne(48, L_D, amorti_milli);
+      } else {
+        dessiner_ligne(48, L_A, angle_brut);
+      }
       dessiner_ligne(86, L_M, molette_crans);
       dessiner_ligne(124, L_C, cran);
       dessiner_ligne(162, L_E, (int32_t)nb_crc_faux);
