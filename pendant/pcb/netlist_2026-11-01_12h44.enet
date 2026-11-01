@@ -1,0 +1,1777 @@
+{
+    "version": "2.0.0",
+    "components": {
+        "gge2": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Designator": "DRV1",
+                "Device": "29383beb46ad7416",
+                "Footprint": "9bce79f1e7bb4eb6",
+                "Symbol": "33aff697f44c8e7a",
+                "Unique ID": "gge2",
+                "Name": "",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I11",
+                "Description": "",
+                "DeviceName": "TMC6300",
+                "FootprintName": "TMC6300"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "VIO",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "UL",
+                    "number": "2",
+                    "net": "UL",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                },
+                "3": {
+                    "name": "UH",
+                    "number": "3",
+                    "net": "UH",
+                    "props": {
+                        "Pin Number": "3"
+                    }
+                },
+                "4": {
+                    "name": "VL",
+                    "number": "4",
+                    "net": "VL",
+                    "props": {
+                        "Pin Number": "4"
+                    }
+                },
+                "5": {
+                    "name": "VH",
+                    "number": "5",
+                    "net": "VH",
+                    "props": {
+                        "Pin Number": "5"
+                    }
+                },
+                "6": {
+                    "name": "WL",
+                    "number": "6",
+                    "net": "WL",
+                    "props": {
+                        "Pin Number": "6"
+                    }
+                },
+                "7": {
+                    "name": "WH",
+                    "number": "7",
+                    "net": "WH",
+                    "props": {
+                        "Pin Number": "7"
+                    }
+                },
+                "8": {
+                    "name": "VCP",
+                    "number": "8",
+                    "net": "",
+                    "props": {
+                        "Pin Number": "8"
+                    }
+                },
+                "9": {
+                    "name": "GND",
+                    "number": "9",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "9"
+                    }
+                },
+                "10": {
+                    "name": "DIAG",
+                    "number": "10",
+                    "net": "DIAG TMC",
+                    "props": {
+                        "Pin Number": "10"
+                    }
+                },
+                "11": {
+                    "name": "SEN",
+                    "number": "11",
+                    "net": "SEN TMC",
+                    "props": {
+                        "Pin Number": "11"
+                    }
+                },
+                "12": {
+                    "name": "W",
+                    "number": "12",
+                    "net": "$1N27",
+                    "props": {
+                        "Pin Number": "12"
+                    }
+                },
+                "13": {
+                    "name": "V",
+                    "number": "13",
+                    "net": "$1N26",
+                    "props": {
+                        "Pin Number": "13"
+                    }
+                },
+                "14": {
+                    "name": "U",
+                    "number": "14",
+                    "net": "$1N25",
+                    "props": {
+                        "Pin Number": "14"
+                    }
+                },
+                "15": {
+                    "name": "GND",
+                    "number": "15",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "15"
+                    }
+                },
+                "16": {
+                    "name": "VIN",
+                    "number": "16",
+                    "net": "VM",
+                    "props": {
+                        "Pin Number": "16"
+                    }
+                }
+            }
+        },
+        "gge3": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "4e602b8a100704bc",
+                "Designator": "CN1",
+                "Device": "58d042218158292f",
+                "Unique ID": "gge3",
+                "Footprint": "8dd1f41391a1d991",
+                "Name": "={Manufacturer Part}",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I12",
+                "LCSC Part Name": "CONN-TH_XH-2A",
+                "Supplier Part": "C9900010847",
+                "Manufacturer": "",
+                "Manufacturer Part": "CONN-TH_XH-2A",
+                "Supplier Footprint": "CONN-TH_XH-2A",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "",
+                "Supplier": "LCSC",
+                "3D Model": "080dd1f62fab4ce1a55d60eccc4d702b|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-2A-1",
+                "3D Model Transform": "291.338,228.346,0,180,0,0,0,-19.685,-133.858",
+                "Description": "",
+                "DeviceName": "CONN-TH_XH-2A",
+                "FootprintName": "CONN-TH_XH-2A-1"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "BTN 1",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                }
+            }
+        },
+        "gge4": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "53937b5961192954",
+                "Designator": "U1",
+                "Device": "821bb0d8427ad1ce",
+                "Unique ID": "gge4",
+                "Footprint": "a11ef09d4dd2cacd",
+                "Name": "={Manufacturer Part}",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I14",
+                "LCSC Part Name": "1x5P 间距:2.5mm 直插 系列:XH",
+                "Supplier Part": "C17700949",
+                "Manufacturer": "XUNDA(讯答)",
+                "Manufacturer Part": "XD-XH-5A-G",
+                "Supplier Footprint": "插件,P=2.5mm",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "https://item.szlcsc.com/datasheet/XD-XH-5A-G/18831312.html",
+                "Supplier": "LCSC",
+                "3D Model": "87675bad1bf44ab5abf342375a8bcc7f|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-5A",
+                "3D Model Transform": "590.55,228.346,0,0,0,0,0.001,21.26,-129.921",
+                "Pins Structure": "1x5P",
+                "Pitch": "2.5mm",
+                "Mounting Type": "Through Hole",
+                "Reference Series": "XH",
+                "Number of Pins": "5P",
+                "Number of Rows": "1",
+                "Number of PINs Per Row": "5",
+                "Row Spacing": "-",
+                "Current Rating": "3A",
+                "Contact Material": "Brass",
+                "Contact Plating": "Tin",
+                "Operating Temperature": "-25℃~+85℃",
+                "Voltage Rating": "250V",
+                "Plastic Material": "PA66",
+                "Flame Retardant Rating": "UL94V-0",
+                "Z-Height of the Board": "7mm",
+                "Y-Width of Bottom Edge on Board": "5.9mm",
+                "Description": "Pins Structure:1x5P Pitch:2.5mm Mounting Type:Through Hole Reference Series:XH Number of Pins:5P Number of Rows:1 Number of PINs Per Row:5 Row Spacing:- Current Rating:3A Contact Material:Brass Contact Plating:Tin Operating Temperature:-25℃~+85℃ Operating",
+                "DeviceName": "XD-XH-5A-G",
+                "FootprintName": "CONN-TH_XH-5A"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "CSN/MODE",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                },
+                "3": {
+                    "name": "3",
+                    "number": "3",
+                    "net": "SCL/CLK MOT",
+                    "props": {
+                        "Pin Number": "3"
+                    }
+                },
+                "4": {
+                    "name": "4",
+                    "number": "4",
+                    "net": "SDA/DO MOT",
+                    "props": {
+                        "Pin Number": "4"
+                    }
+                },
+                "5": {
+                    "name": "5",
+                    "number": "5",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "5"
+                    }
+                }
+            }
+        },
+        "gge6": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Designator": "IC1",
+                "Device": "b5370bb0f0f1a13f",
+                "Name": "",
+                "Symbol": "86976e46e3c45053",
+                "Unique ID": "gge6",
+                "Footprint": "455bfe5cab754d58",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I40",
+                "Description": "",
+                "3D Model": "b30ed130ee7b4a61be33b764a0831a16|47e7ce3f884e41a0a0bba7668da9c81e",
+                "3D Model Title": "WeAct-STM32G47xCxTxCoreBoard_Long_V10 3D",
+                "3D Model Transform": "2482.67687,718.1087794797414,513.3863672087028,90,0,0,300,1187.00787,-43.30709",
+                "DeviceName": "STM32G474CEU6",
+                "FootprintName": "STM32G474CEU6"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "GND",
+                    "number": "1",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "GND",
+                    "number": "2",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                },
+                "3": {
+                    "name": "5V",
+                    "number": "3",
+                    "net": "",
+                    "props": {
+                        "Pin Number": "3"
+                    }
+                },
+                "4": {
+                    "name": "5V",
+                    "number": "4",
+                    "net": "",
+                    "props": {
+                        "Pin Number": "4"
+                    }
+                },
+                "5": {
+                    "name": "B12",
+                    "number": "5",
+                    "net": "DIAG TMC",
+                    "props": {
+                        "Pin Number": "5"
+                    }
+                },
+                "6": {
+                    "name": "B13",
+                    "number": "6",
+                    "net": "UL",
+                    "props": {
+                        "Pin Number": "6"
+                    }
+                },
+                "7": {
+                    "name": "B14",
+                    "number": "7",
+                    "net": "VL",
+                    "props": {
+                        "Pin Number": "7"
+                    }
+                },
+                "8": {
+                    "name": "B15",
+                    "number": "8",
+                    "net": "WL",
+                    "props": {
+                        "Pin Number": "8"
+                    }
+                },
+                "9": {
+                    "name": "C6",
+                    "number": "9",
+                    "net": "",
+                    "props": {
+                        "Pin Number": "9"
+                    }
+                },
+                "10": {
+                    "name": "A8",
+                    "number": "10",
+                    "net": "UH",
+                    "props": {
+                        "Pin Number": "10"
+                    }
+                },
+                "11": {
+                    "name": "A9",
+                    "number": "11",
+                    "net": "VH",
+                    "props": {
+                        "Pin Number": "11"
+                    }
+                },
+                "12": {
+                    "name": "A10",
+                    "number": "12",
+                    "net": "WH",
+                    "props": {
+                        "Pin Number": "12"
+                    }
+                },
+                "13": {
+                    "name": "A11",
+                    "number": "13",
+                    "net": "",
+                    "props": {
+                        "Pin Number": "13"
+                    }
+                },
+                "14": {
+                    "name": "A12",
+                    "number": "14",
+                    "net": "",
+                    "props": {
+                        "Pin Number": "14"
+                    }
+                },
+                "15": {
+                    "name": "A15",
+                    "number": "15",
+                    "net": "BTN 8",
+                    "props": {
+                        "Pin Number": "15"
+                    }
+                },
+                "16": {
+                    "name": "C10",
+                    "number": "16",
+                    "net": "BTN 3",
+                    "props": {
+                        "Pin Number": "16"
+                    }
+                },
+                "17": {
+                    "name": "C11",
+                    "number": "17",
+                    "net": "BTN 6",
+                    "props": {
+                        "Pin Number": "17"
+                    }
+                },
+                "18": {
+                    "name": "B3",
+                    "number": "18",
+                    "net": "SCL/CLK MOT",
+                    "props": {
+                        "Pin Number": "18"
+                    }
+                },
+                "19": {
+                    "name": "B4",
+                    "number": "19",
+                    "net": "SDA/DO MOT",
+                    "props": {
+                        "Pin Number": "19"
+                    }
+                },
+                "20": {
+                    "name": "B5",
+                    "number": "20",
+                    "net": "BTN 1",
+                    "props": {
+                        "Pin Number": "20"
+                    }
+                },
+                "21": {
+                    "name": "B6",
+                    "number": "21",
+                    "net": "BTN 5",
+                    "props": {
+                        "Pin Number": "21"
+                    }
+                },
+                "22": {
+                    "name": "B7",
+                    "number": "22",
+                    "net": "BTN 9",
+                    "props": {
+                        "Pin Number": "22"
+                    }
+                },
+                "23": {
+                    "name": "B9",
+                    "number": "23",
+                    "net": "BTN 7",
+                    "props": {
+                        "Pin Number": "23"
+                    }
+                },
+                "24": {
+                    "name": "GND",
+                    "number": "24",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "24"
+                    }
+                },
+                "25": {
+                    "name": "GND",
+                    "number": "25",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "25"
+                    }
+                },
+                "26": {
+                    "name": "3V3",
+                    "number": "26",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "26"
+                    }
+                },
+                "27": {
+                    "name": "VB",
+                    "number": "27",
+                    "net": "",
+                    "props": {
+                        "Pin Number": "27"
+                    }
+                },
+                "28": {
+                    "name": "C13",
+                    "number": "28",
+                    "net": "BTN 2",
+                    "props": {
+                        "Pin Number": "28"
+                    }
+                },
+                "29": {
+                    "name": "NR",
+                    "number": "29",
+                    "net": "",
+                    "props": {
+                        "Pin Number": "29"
+                    }
+                },
+                "30": {
+                    "name": "A0",
+                    "number": "30",
+                    "net": "JOG A",
+                    "props": {
+                        "Pin Number": "30"
+                    }
+                },
+                "31": {
+                    "name": "A1",
+                    "number": "31",
+                    "net": "JOG B",
+                    "props": {
+                        "Pin Number": "31"
+                    }
+                },
+                "32": {
+                    "name": "A2",
+                    "number": "32",
+                    "net": "POT",
+                    "props": {
+                        "Pin Number": "32"
+                    }
+                },
+                "33": {
+                    "name": "A3",
+                    "number": "33",
+                    "net": "JOG SELECT B",
+                    "props": {
+                        "Pin Number": "33"
+                    }
+                },
+                "34": {
+                    "name": "A4",
+                    "number": "34",
+                    "net": "CS ECRAN",
+                    "props": {
+                        "Pin Number": "34"
+                    }
+                },
+                "35": {
+                    "name": "A5",
+                    "number": "35",
+                    "net": "SCK ECRAN",
+                    "props": {
+                        "Pin Number": "35"
+                    }
+                },
+                "36": {
+                    "name": "A6",
+                    "number": "36",
+                    "net": "BL ECRAN",
+                    "props": {
+                        "Pin Number": "36"
+                    }
+                },
+                "37": {
+                    "name": "A7",
+                    "number": "37",
+                    "net": "MOSI ECRAN",
+                    "props": {
+                        "Pin Number": "37"
+                    }
+                },
+                "38": {
+                    "name": "C4",
+                    "number": "38",
+                    "net": "JOG SELECT A",
+                    "props": {
+                        "Pin Number": "38"
+                    }
+                },
+                "39": {
+                    "name": "B0",
+                    "number": "39",
+                    "net": "DC ECRAN",
+                    "props": {
+                        "Pin Number": "39"
+                    }
+                },
+                "40": {
+                    "name": "B1",
+                    "number": "40",
+                    "net": "RST ECRAN",
+                    "props": {
+                        "Pin Number": "40"
+                    }
+                },
+                "41": {
+                    "name": "B2",
+                    "number": "41",
+                    "net": "BTN 4",
+                    "props": {
+                        "Pin Number": "41"
+                    }
+                },
+                "42": {
+                    "name": "V+",
+                    "number": "42",
+                    "net": "",
+                    "props": {
+                        "Pin Number": "42"
+                    }
+                },
+                "43": {
+                    "name": "B10",
+                    "number": "43",
+                    "net": "CSN/MODE",
+                    "props": {
+                        "Pin Number": "43"
+                    }
+                },
+                "44": {
+                    "name": "B11",
+                    "number": "44",
+                    "net": "SEN TMC",
+                    "props": {
+                        "Pin Number": "44"
+                    }
+                },
+                "45": {
+                    "name": "3V3",
+                    "number": "45",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "45"
+                    }
+                },
+                "46": {
+                    "name": "3V3",
+                    "number": "46",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "46"
+                    }
+                },
+                "47": {
+                    "name": "GND",
+                    "number": "47",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "47"
+                    }
+                },
+                "48": {
+                    "name": "GND",
+                    "number": "48",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "48"
+                    }
+                }
+            }
+        },
+        "gge7": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "1af5b29c0fb62ac3",
+                "Designator": "U2",
+                "Footprint": "3ae219f58fb35713",
+                "Supplier": "LCSC",
+                "Supplier Part": "C474920",
+                "Manufacturer": "KEFA(科发)",
+                "Manufacturer Part": "KF128-2.54-2P",
+                "JLCPCB Part Class": "Extended Part",
+                "Device": "75a67ba5947444c7",
+                "Unique ID": "gge7",
+                "Name": "={Manufacturer Part}",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I45",
+                "LCSC Part Name": "1x2P 2.54mm 直插 排数:1 每排P数:2",
+                "Supplier Footprint": "插件,P=2.54mm",
+                "Datasheet": "https://item.szlcsc.com/datasheet/KF128-2.54-2P/481538.html",
+                "3D Model": "f7768bd52235433287d60b9319fc2644|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_P2.54_KF128-2.54-2P",
+                "3D Model Transform": "200,248.031,0,0,0,0,0,-5.906,-137.795",
+                "Number of Positions or Pins": "1x2P",
+                "Pitch": "2.54mm",
+                "Color": "Green",
+                "Mounting Type": "Through Hole",
+                "Number of Pins": "2P",
+                "Number of Rows": "1",
+                "Number of PINs Per Row": "2",
+                "Screw Specification": "M1.6",
+                "Current Rating": "8A",
+                "Voltage Rating (Max)": "130V",
+                "Wire Gauge - AWG": "18~26",
+                "Wire Gauge - mm2": "1",
+                "Operating Temperature": "-40℃~+105℃",
+                "Height Above Board": "8.8mm",
+                "Description": "Number of Positions or Pins:1x2P Pitch:2.54mm Color:Green Mounting Type:Through Hole Number of Pins:2P Number of Rows:1 Number of PINs Per Row:2 Screw Specification:M1.6 Current Rating:8A Voltage Rating (Max):130V Wire Gauge - AWG:18~26 Wire Gauge - mm2:1",
+                "DeviceName": "KF128-2.54-2P",
+                "FootprintName": "CONN-TH_P2.54_KF128-2.54-2P"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "VM",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                }
+            }
+        },
+        "gge8": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "f9e29eb45675b138",
+                "Designator": "CN4",
+                "Device": "f99217fc6ac51d0e",
+                "Unique ID": "gge8",
+                "Footprint": "c20a92c0ba516098",
+                "Name": "={Manufacturer Part}",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I56",
+                "LCSC Part Name": "1x8P 间距:2.5mm 直插",
+                "Supplier Part": "C53261329",
+                "Manufacturer": "深海电子",
+                "Manufacturer Part": "SH-XH2.54-8P",
+                "Supplier Footprint": "插件,P=2.5mm",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "https://item.szlcsc.com/datasheet/SH-XH2.54-8P/56320013.html",
+                "Supplier": "LCSC",
+                "3D Model": "2a96f9a015b54e95934ccacdf0dd2de6|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-8A",
+                "3D Model Transform": "885.825,228.346,0,0,0,0,0,-21.654,-137.795",
+                "Pins Structure": "1x8P",
+                "Pitch": "2.5mm",
+                "Mounting Type": "Through Hole",
+                "Number of Pins": "8P",
+                "Number of Rows": "1",
+                "Number of PINs Per Row": "8",
+                "Current Rating": "3A",
+                "Contact Material": "Brass",
+                "Contact Plating": "Tin",
+                "Operating Temperature": "-25℃~+85℃",
+                "Voltage Rating": "250V",
+                "Plastic Material": "PA66",
+                "Flame Retardant Rating": "UL94V-0",
+                "Color": "White",
+                "Z-Height of the Board": "7.1mm",
+                "X-Length of Bottom Edge on Board (Spacing Line)": "22.5mm",
+                "Y-Width of Bottom Edge on Board": "5.8mm",
+                "Description": "Pins Structure:1x8P Pitch:2.5mm Mounting Type:Through Hole Number of Pins:8P Number of Rows:1 Number of PINs Per Row:8 Current Rating:3A Contact Material:Brass Contact Plating:Tin Operating Temperature:-25℃~+85℃ Operating Temperature:-25℃~+85℃ Voltage Rat",
+                "DeviceName": "SH-XH2.54-8P",
+                "FootprintName": "CONN-TH_XH-8A"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                },
+                "3": {
+                    "name": "3",
+                    "number": "3",
+                    "net": "MOSI ECRAN",
+                    "props": {
+                        "Pin Number": "3"
+                    }
+                },
+                "4": {
+                    "name": "4",
+                    "number": "4",
+                    "net": "SCK ECRAN",
+                    "props": {
+                        "Pin Number": "4"
+                    }
+                },
+                "5": {
+                    "name": "5",
+                    "number": "5",
+                    "net": "CS ECRAN",
+                    "props": {
+                        "Pin Number": "5"
+                    }
+                },
+                "6": {
+                    "name": "6",
+                    "number": "6",
+                    "net": "DC ECRAN",
+                    "props": {
+                        "Pin Number": "6"
+                    }
+                },
+                "7": {
+                    "name": "7",
+                    "number": "7",
+                    "net": "RST ECRAN",
+                    "props": {
+                        "Pin Number": "7"
+                    }
+                },
+                "8": {
+                    "name": "8",
+                    "number": "8",
+                    "net": "BL ECRAN",
+                    "props": {
+                        "Pin Number": "8"
+                    }
+                }
+            }
+        },
+        "gge3_0": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "4e602b8a100704bc",
+                "Designator": "CN2",
+                "Device": "58d042218158292f",
+                "Footprint": "8dd1f41391a1d991",
+                "Name": "={Manufacturer Part}",
+                "Unique ID": "gge3_0",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I92",
+                "LCSC Part Name": "CONN-TH_XH-2A",
+                "Supplier Part": "C9900010847",
+                "Manufacturer": "",
+                "Manufacturer Part": "CONN-TH_XH-2A",
+                "Supplier Footprint": "CONN-TH_XH-2A",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "",
+                "Supplier": "LCSC",
+                "3D Model": "080dd1f62fab4ce1a55d60eccc4d702b|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-2A-1",
+                "3D Model Transform": "291.338,228.346,0,180,0,0,0,-19.685,-133.858",
+                "Description": "",
+                "DeviceName": "CONN-TH_XH-2A",
+                "FootprintName": "CONN-TH_XH-2A-1"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "BTN 2",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                }
+            }
+        },
+        "gge3_1": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "4e602b8a100704bc",
+                "Designator": "CN5",
+                "Device": "58d042218158292f",
+                "Footprint": "8dd1f41391a1d991",
+                "Name": "={Manufacturer Part}",
+                "Unique ID": "gge3_1",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I95",
+                "LCSC Part Name": "CONN-TH_XH-2A",
+                "Supplier Part": "C9900010847",
+                "Manufacturer": "",
+                "Manufacturer Part": "CONN-TH_XH-2A",
+                "Supplier Footprint": "CONN-TH_XH-2A",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "",
+                "Supplier": "LCSC",
+                "3D Model": "080dd1f62fab4ce1a55d60eccc4d702b|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-2A-1",
+                "3D Model Transform": "291.338,228.346,0,180,0,0,0,-19.685,-133.858",
+                "Description": "",
+                "DeviceName": "CONN-TH_XH-2A",
+                "FootprintName": "CONN-TH_XH-2A-1"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "BTN 3",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                }
+            }
+        },
+        "gge3_2": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "4e602b8a100704bc",
+                "Designator": "CN6",
+                "Device": "58d042218158292f",
+                "Footprint": "8dd1f41391a1d991",
+                "Name": "={Manufacturer Part}",
+                "Unique ID": "gge3_2",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I98",
+                "LCSC Part Name": "CONN-TH_XH-2A",
+                "Supplier Part": "C9900010847",
+                "Manufacturer": "",
+                "Manufacturer Part": "CONN-TH_XH-2A",
+                "Supplier Footprint": "CONN-TH_XH-2A",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "",
+                "Supplier": "LCSC",
+                "3D Model": "080dd1f62fab4ce1a55d60eccc4d702b|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-2A-1",
+                "3D Model Transform": "291.338,228.346,0,180,0,0,0,-19.685,-133.858",
+                "Description": "",
+                "DeviceName": "CONN-TH_XH-2A",
+                "FootprintName": "CONN-TH_XH-2A-1"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "BTN 4",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                }
+            }
+        },
+        "gge3_4": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "4e602b8a100704bc",
+                "Designator": "CN8",
+                "Device": "58d042218158292f",
+                "Footprint": "8dd1f41391a1d991",
+                "Name": "={Manufacturer Part}",
+                "Unique ID": "gge3_4",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I102",
+                "LCSC Part Name": "CONN-TH_XH-2A",
+                "Supplier Part": "C9900010847",
+                "Manufacturer": "",
+                "Manufacturer Part": "CONN-TH_XH-2A",
+                "Supplier Footprint": "CONN-TH_XH-2A",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "",
+                "Supplier": "LCSC",
+                "3D Model": "080dd1f62fab4ce1a55d60eccc4d702b|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-2A-1",
+                "3D Model Transform": "291.338,228.346,0,180,0,0,0,-19.685,-133.858",
+                "Description": "",
+                "DeviceName": "CONN-TH_XH-2A",
+                "FootprintName": "CONN-TH_XH-2A-1"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "BTN 5",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                }
+            }
+        },
+        "gge3_6": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "4e602b8a100704bc",
+                "Designator": "CN10",
+                "Device": "58d042218158292f",
+                "Footprint": "8dd1f41391a1d991",
+                "Name": "={Manufacturer Part}",
+                "Unique ID": "gge3_6",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I104",
+                "LCSC Part Name": "CONN-TH_XH-2A",
+                "Supplier Part": "C9900010847",
+                "Manufacturer": "",
+                "Manufacturer Part": "CONN-TH_XH-2A",
+                "Supplier Footprint": "CONN-TH_XH-2A",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "",
+                "Supplier": "LCSC",
+                "3D Model": "080dd1f62fab4ce1a55d60eccc4d702b|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-2A-1",
+                "3D Model Transform": "291.338,228.346,0,180,0,0,0,-19.685,-133.858",
+                "Description": "",
+                "DeviceName": "CONN-TH_XH-2A",
+                "FootprintName": "CONN-TH_XH-2A-1"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "BTN 6",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                }
+            }
+        },
+        "gge3_7": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "4e602b8a100704bc",
+                "Designator": "CN7",
+                "Device": "58d042218158292f",
+                "Footprint": "8dd1f41391a1d991",
+                "Name": "={Manufacturer Part}",
+                "Unique ID": "gge3_7",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I118",
+                "LCSC Part Name": "CONN-TH_XH-2A",
+                "Supplier Part": "C9900010847",
+                "Manufacturer": "",
+                "Manufacturer Part": "CONN-TH_XH-2A",
+                "Supplier Footprint": "CONN-TH_XH-2A",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "",
+                "Supplier": "LCSC",
+                "3D Model": "080dd1f62fab4ce1a55d60eccc4d702b|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-2A-1",
+                "3D Model Transform": "291.338,228.346,0,180,0,0,0,-19.685,-133.858",
+                "Description": "",
+                "DeviceName": "CONN-TH_XH-2A",
+                "FootprintName": "CONN-TH_XH-2A-1"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "BTN 7",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                }
+            }
+        },
+        "gge5_1": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "fd144a0f2b96baaa",
+                "Designator": "CN11",
+                "Device": "7d508df65777ec88",
+                "Footprint": "3dfddd2538a4f7ba",
+                "Name": "={Manufacturer Part}",
+                "Unique ID": "gge5_1",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I124",
+                "LCSC Part Name": "1x3P 间距:2.5mm 直插 系列:XH",
+                "Supplier Part": "C23397291",
+                "Manufacturer": "BXCONN(宝讯)",
+                "Manufacturer Part": "WF-1A254A3P-Y",
+                "Supplier Footprint": "插件,P=2.5mm",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "https://item.szlcsc.com/datasheet/WF-1A254A3P-Y/25128377.html",
+                "Supplier": "LCSC",
+                "3D Model": "b21bd12e05d6479b9f15648173802cee|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "XH2.5-3A",
+                "3D Model Transform": "393.7,224.44837,0,180,0,0,-0.005,17.716,-98.425",
+                "Pins Structure": "1x3P",
+                "Pitch": "2.5mm",
+                "Mounting Type": "Through Hole",
+                "Reference Series": "XH",
+                "Number of Pins": "3P",
+                "Number of Rows": "1",
+                "Number of PINs Per Row": "3",
+                "Current Rating": "2A",
+                "Contact Material": "Brass",
+                "Contact Plating": "Tin",
+                "Operating Temperature": "-25℃~+85℃",
+                "Voltage Rating": "250V",
+                "Plastic Material": "PA66",
+                "Flame Retardant Rating": "UL94V-0",
+                "Color": "Yellow",
+                "Z-Height of the Board": "7.01mm",
+                "X-Length of Bottom Edge on Board (Spacing Line)": "10mm",
+                "Y-Width of Bottom Edge on Board": "5.91mm",
+                "Description": "Pins Structure:1x3P Pitch:2.5mm Mounting Type:Through Hole Reference Series:XH Number of Pins:3P Number of Rows:1 Number of PINs Per Row:3 Current Rating:2A Contact Material:Brass Contact Plating:Tin Operating Temperature:-25℃~+85℃ Operating Temperature:-",
+                "DeviceName": "WF-1A254A3P-Y",
+                "FootprintName": "CONN-TH_XH-3A"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "JOG SELECT A",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                },
+                "3": {
+                    "name": "3",
+                    "number": "3",
+                    "net": "JOG SELECT B",
+                    "props": {
+                        "Pin Number": "3"
+                    }
+                }
+            }
+        },
+        "gge5_2": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "fd144a0f2b96baaa",
+                "Designator": "CN13",
+                "Device": "7d508df65777ec88",
+                "Footprint": "3dfddd2538a4f7ba",
+                "Name": "={Manufacturer Part}",
+                "Unique ID": "gge5_2",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I140",
+                "LCSC Part Name": "1x3P 间距:2.5mm 直插 系列:XH",
+                "Supplier Part": "C23397291",
+                "Manufacturer": "BXCONN(宝讯)",
+                "Manufacturer Part": "WF-1A254A3P-Y",
+                "Supplier Footprint": "插件,P=2.5mm",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "https://item.szlcsc.com/datasheet/WF-1A254A3P-Y/25128377.html",
+                "Supplier": "LCSC",
+                "3D Model": "b21bd12e05d6479b9f15648173802cee|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "XH2.5-3A",
+                "3D Model Transform": "393.7,224.44837,0,180,0,0,-0.005,17.716,-98.425",
+                "Pins Structure": "1x3P",
+                "Pitch": "2.5mm",
+                "Mounting Type": "Through Hole",
+                "Reference Series": "XH",
+                "Number of Pins": "3P",
+                "Number of Rows": "1",
+                "Number of PINs Per Row": "3",
+                "Current Rating": "2A",
+                "Contact Material": "Brass",
+                "Contact Plating": "Tin",
+                "Operating Temperature": "-25℃~+85℃",
+                "Voltage Rating": "250V",
+                "Plastic Material": "PA66",
+                "Flame Retardant Rating": "UL94V-0",
+                "Color": "Yellow",
+                "Z-Height of the Board": "7.01mm",
+                "X-Length of Bottom Edge on Board (Spacing Line)": "10mm",
+                "Y-Width of Bottom Edge on Board": "5.91mm",
+                "Description": "Pins Structure:1x3P Pitch:2.5mm Mounting Type:Through Hole Reference Series:XH Number of Pins:3P Number of Rows:1 Number of PINs Per Row:3 Current Rating:2A Contact Material:Brass Contact Plating:Tin Operating Temperature:-25℃~+85℃ Operating Temperature:-",
+                "DeviceName": "WF-1A254A3P-Y",
+                "FootprintName": "CONN-TH_XH-3A"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "POT",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                },
+                "3": {
+                    "name": "3",
+                    "number": "3",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "3"
+                    }
+                }
+            }
+        },
+        "gge9": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "e74a7fc5599822fd",
+                "Designator": "CN9",
+                "Device": "490682a44dbda695",
+                "Unique ID": "gge9",
+                "Footprint": "8e33471c5983d066",
+                "Name": "={Manufacturer Part}",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I142",
+                "LCSC Part Name": "XH4x2.54V",
+                "Supplier Part": "C9900021957",
+                "Manufacturer": "",
+                "Manufacturer Part": "XH4x2.54V",
+                "Supplier Footprint": "CONN-TH",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "",
+                "Supplier": "LCSC",
+                "3D Model": "7a3c23d78a664d6a9b542e311eb2b492|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-4A",
+                "3D Model Transform": "492.125,228.346,0,0,0,0,-0.002,20.197,-129.921",
+                "Description": "",
+                "DeviceName": "XH4x2.54V",
+                "FootprintName": "CONN-TH_XH-4A"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "JOG A",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                },
+                "3": {
+                    "name": "3",
+                    "number": "3",
+                    "net": "JOG B",
+                    "props": {
+                        "Pin Number": "3"
+                    }
+                },
+                "4": {
+                    "name": "4",
+                    "number": "4",
+                    "net": "GND",
+                    "props": {
+                        "Pin Number": "4"
+                    }
+                }
+            }
+        },
+        "gge3_8": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "4e602b8a100704bc",
+                "Designator": "CN12",
+                "Device": "58d042218158292f",
+                "Footprint": "8dd1f41391a1d991",
+                "Name": "={Manufacturer Part}",
+                "Unique ID": "gge3_8",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I143",
+                "LCSC Part Name": "CONN-TH_XH-2A",
+                "Supplier Part": "C9900010847",
+                "Manufacturer": "",
+                "Manufacturer Part": "CONN-TH_XH-2A",
+                "Supplier Footprint": "CONN-TH_XH-2A",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "",
+                "Supplier": "LCSC",
+                "3D Model": "080dd1f62fab4ce1a55d60eccc4d702b|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-2A-1",
+                "3D Model Transform": "291.338,228.346,0,180,0,0,0,-19.685,-133.858",
+                "Description": "",
+                "DeviceName": "CONN-TH_XH-2A",
+                "FootprintName": "CONN-TH_XH-2A-1"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "BTN 8",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                }
+            }
+        },
+        "gge10": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "53b920218385ce71",
+                "Designator": "U3",
+                "Footprint": "c723c187f2e5172a",
+                "Supplier": "LCSC",
+                "Supplier Part": "C474921",
+                "Manufacturer": "KEFA(科发)",
+                "Manufacturer Part": "KF128-2.54-3P",
+                "JLCPCB Part Class": "Extended Part",
+                "Device": "ff95c8a1ed941b81",
+                "Unique ID": "gge10",
+                "Name": "={Manufacturer Part}",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I147",
+                "LCSC Part Name": "1x3P 2.54mm 直插 排数:1 每排P数:3",
+                "Supplier Footprint": "插件,P=2.54mm",
+                "Datasheet": "https://item.szlcsc.com/datasheet/KF128-2.54-3P/481539.html",
+                "3D Model": "3d722ae519a5441fa2bb857ec8ef58a4|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_3P-P2.54_KF128-2.54-3P",
+                "3D Model Transform": "299.9994,248.031,0,0,0,0,0,-5.906,-137.795",
+                "Number of Positions or Pins": "1x3P",
+                "Pitch": "2.54mm",
+                "Color": "Green",
+                "Mounting Type": "Through Hole",
+                "Number of Pins": "3P",
+                "Number of Rows": "1",
+                "Number of PINs Per Row": "3",
+                "Screw Specification": "M1.6",
+                "Current Rating": "8A",
+                "Voltage Rating (Max)": "130V",
+                "Wire Gauge - AWG": "18~26",
+                "Wire Gauge - mm2": "1",
+                "Operating Temperature": "-40℃~+105℃",
+                "Height Above Board": "8.8mm",
+                "Description": "Number of Positions or Pins:1x3P Pitch:2.54mm Color:Green Mounting Type:Through Hole Number of Pins:3P Number of Rows:1 Number of PINs Per Row:3 Screw Specification:M1.6 Current Rating:8A Voltage Rating (Max):130V Wire Gauge - AWG:18~26 Wire Gauge - mm2:1",
+                "DeviceName": "KF128-2.54-3P",
+                "FootprintName": "CONN-TH_3P-P2.54_KF128-2.54-3P"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "$1N25",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "$1N26",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                },
+                "3": {
+                    "name": "3",
+                    "number": "3",
+                    "net": "$1N27",
+                    "props": {
+                        "Pin Number": "3"
+                    }
+                }
+            }
+        },
+        "gge3_9": {
+            "props": {
+                "Add into BOM": "yes",
+                "Convert to PCB": "yes",
+                "Symbol": "4e602b8a100704bc",
+                "Designator": "CN3",
+                "Device": "58d042218158292f",
+                "Footprint": "8dd1f41391a1d991",
+                "Name": "={Manufacturer Part}",
+                "Unique ID": "gge3_9",
+                "Reuse Block": "",
+                "Group ID": "",
+                "Channel ID": "$1I148",
+                "LCSC Part Name": "CONN-TH_XH-2A",
+                "Supplier Part": "C9900010847",
+                "Manufacturer": "",
+                "Manufacturer Part": "CONN-TH_XH-2A",
+                "Supplier Footprint": "CONN-TH_XH-2A",
+                "JLCPCB Part Class": "Extended Part",
+                "Datasheet": "",
+                "Supplier": "LCSC",
+                "3D Model": "080dd1f62fab4ce1a55d60eccc4d702b|0819f05c4eef4c71ace90d822a990e87",
+                "3D Model Title": "CONN-TH_XH-2A-1",
+                "3D Model Transform": "291.338,228.346,0,180,0,0,0,-19.685,-133.858",
+                "Description": "",
+                "DeviceName": "CONN-TH_XH-2A",
+                "FootprintName": "CONN-TH_XH-2A-1"
+            },
+            "pinInfoMap": {
+                "1": {
+                    "name": "1",
+                    "number": "1",
+                    "net": "+3.3V",
+                    "props": {
+                        "Pin Number": "1"
+                    }
+                },
+                "2": {
+                    "name": "2",
+                    "number": "2",
+                    "net": "BTN 9",
+                    "props": {
+                        "Pin Number": "2"
+                    }
+                }
+            }
+        }
+    },
+    "designRule": {
+        "trackPhysics": {
+            "copperThickness1oz": {
+                "name": "copperThickness1oz",
+                "isDefault": true,
+                "unit": "mm",
+                "strokeValue": {
+                    "common": {
+                        "min": 0.127,
+                        "max": 2.54,
+                        "default": 0.254
+                    }
+                }
+            },
+            "copperThickness2oz": {
+                "name": "copperThickness2oz",
+                "isDefault": false,
+                "unit": "mm",
+                "strokeValue": {
+                    "common": {
+                        "min": 0.203,
+                        "max": 2.54,
+                        "default": 0.254
+                    }
+                }
+            }
+        },
+        "netRule": {
+            "GND": {
+                "net": "GND",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "+3.3V": {
+                "net": "+3.3V",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "UL": {
+                "net": "UL",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "UH": {
+                "net": "UH",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "VL": {
+                "net": "VL",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "VH": {
+                "net": "VH",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "WL": {
+                "net": "WL",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "WH": {
+                "net": "WH",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "$1N25": {
+                "net": "$1N25",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "$1N26": {
+                "net": "$1N26",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "$1N27": {
+                "net": "$1N27",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "VM": {
+                "net": "VM",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "CSN/MODE": {
+                "net": "CSN/MODE",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "SCL/CLK MOT": {
+                "net": "SCL/CLK MOT",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "SDA/DO MOT": {
+                "net": "SDA/DO MOT",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "MOSI ECRAN": {
+                "net": "MOSI ECRAN",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "SCK ECRAN": {
+                "net": "SCK ECRAN",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "CS ECRAN": {
+                "net": "CS ECRAN",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "DC ECRAN": {
+                "net": "DC ECRAN",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "RST ECRAN": {
+                "net": "RST ECRAN",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "BL ECRAN": {
+                "net": "BL ECRAN",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "SEN TMC": {
+                "net": "SEN TMC",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "DIAG TMC": {
+                "net": "DIAG TMC",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "BTN 1": {
+                "net": "BTN 1",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "BTN 5": {
+                "net": "BTN 5",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "BTN 9": {
+                "net": "BTN 9",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "BTN 2": {
+                "net": "BTN 2",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "BTN 3": {
+                "net": "BTN 3",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "BTN 4": {
+                "net": "BTN 4",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "BTN 6": {
+                "net": "BTN 6",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "JOG A": {
+                "net": "JOG A",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "JOG B": {
+                "net": "JOG B",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "POT": {
+                "net": "POT",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "BTN 7": {
+                "net": "BTN 7",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "JOG SELECT A": {
+                "net": "JOG SELECT A",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "JOG SELECT B": {
+                "net": "JOG SELECT B",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            },
+            "BTN 8": {
+                "net": "BTN 8",
+                "ruleMap": {
+                    "TrackPhysics": ""
+                }
+            }
+        }
+    },
+    "differentialPair": {},
+    "netClass": {},
+    "equalLengthNetGroup": {}
+}
