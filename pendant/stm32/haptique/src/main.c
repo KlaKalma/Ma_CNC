@@ -16,6 +16,10 @@
  * centre, broche, butees, libre, debug (A angle, M molette, C cran, E erreurs CRC). Au bord de
  * l'ecran, un point suit le moteur.
  *
+ * Liaison USB, port serie virtuel, en lignes de texte :
+ *   la carte envoie toutes les 20 ms : P mode cran molette axe_um broche jog_pct crc
+ *   elle recoit : A axe_um, la position de l'axe
+ *
  * Pilotage par le debogueur : ecrire duree_s (0 = sans limite) puis commande.
  *   1 calage, 2 cogging, 3 calage + cogging (moteur libre, sans y toucher)
  *   10 menu (30 crans), 11 molette (100 crans), 13 interrupteur,
@@ -33,6 +37,7 @@
 #include <stddef.h>
 #include <string.h>
 #include "police.h"
+#include "usb_cdc.h"
 
 #define NB_PWM 6
 
@@ -168,6 +173,9 @@ volatile int32_t  mode_ecart = 0;      /* decale le mode choisi a la molette */
 volatile int32_t  ecran_sens = -1;     /* sens du moteur vu depuis l'ecran */
 volatile int32_t  axe_um = 0;          /* position de l'axe, fournie plus tard par LinuxCNC */
 volatile int32_t  broche_tr_min = BROCHE_MIN;
+volatile int32_t  jog_pct = 100;
+volatile uint32_t usb_lignes = 0;
+volatile uint32_t usb_recues = 0;
 
 volatile uint32_t mesure_n = 0;
 volatile int32_t  mesure_u_rms_uv = 0;
@@ -1710,6 +1718,7 @@ static void afficher(uint32_t maintenant)
       float j = (hors_zone > 0.0f) ? hors_zone / (0.5f * p_.largeur - JOG_ZONE_MORTE) : 0.0f;
       int32_t pct = 100 + (int32_t)lroundf(((rel * (float)ecran_sens > 0.0f) ? 100.0f : -100.0f) * j);
       pct = (pct < 0) ? 0 : pct;
+      jog_pct = pct;
       cle = (uint32_t)pct;
       if (cle != cle_zone_) {
         texte_entier(pct, t);
@@ -1774,6 +1783,78 @@ static void afficher(uint32_t maintenant)
   }
 }
 
+/* --- Liaison USB --------------------------------------------------------- */
+
+static char *ajouter_entier(char *b, int32_t v)
+{
+  *b++ = ' ';
+  texte_entier(v, b);
+  while (*b) {
+    b++;
+  }
+  return b;
+}
+
+static void usb_envoyer_etat(void)
+{
+  char t[96];
+  char *b = t;
+  *b++ = 'P';
+  b = ajouter_entier(b, (int32_t)mode_ui);
+  b = ajouter_entier(b, cran);
+  b = ajouter_entier(b, molette_crans);
+  b = ajouter_entier(b, axe_um);
+  b = ajouter_entier(b, broche_tr_min);
+  b = ajouter_entier(b, jog_pct);
+  b = ajouter_entier(b, (int32_t)nb_crc_faux);
+  *b++ = '\n';
+  if (usb_cdc_ecrire(t, (uint32_t)(b - t)) == (uint32_t)(b - t)) {
+    usb_lignes++;
+  }
+}
+
+static void usb_traiter_ligne(const char *l)
+{
+  if (l[0] != 'A' || l[1] != ' ') {
+    return;
+  }
+  const char *p = l + 2;
+  const int neg = (*p == '-');
+  p += neg;
+  if (*p < '0' || *p > '9') {
+    return;
+  }
+  int32_t v = 0;
+  for (; *p >= '0' && *p <= '9'; p++) {
+    v = v * 10 + (*p - '0');
+  }
+  if (*p != 0) {
+    return;
+  }
+  axe_um = neg ? -v : v;
+  usb_recues++;
+}
+
+static void usb_recevoir(void)
+{
+  static char l[24];
+  static uint32_t n = 0;
+  char c;
+  while (usb_cdc_lire(&c)) {
+    if (c == '\n' || c == '\r') {
+      l[n] = 0;
+      if (n > 0U) {
+        usb_traiter_ligne(l);
+      }
+      n = 0;
+    } else if (n + 1U < sizeof(l)) {
+      l[n++] = c;
+    } else {
+      n = 0;
+    }
+  }
+}
+
 int main(void)
 {
   HAL_Init();
@@ -1831,7 +1912,9 @@ int main(void)
   }
   init_interface();
   init_pwm();
+  usb_cdc_init();
 
+  uint32_t t_usb = 0;
   uint32_t t_led = 0;
   uint32_t t_ecran = 0;
   uint32_t fin = 0;
@@ -1878,6 +1961,12 @@ int main(void)
     const int32_t m = (int32_t)TIM2->CNT;
     molette = m;
     molette_crans = (m + ((m >= 0) ? 2 : -2)) / 4;
+
+    usb_recevoir();
+    if (maintenant - t_usb >= 20U) {
+      t_usb = maintenant;
+      usb_envoyer_etat();
+    }
 
     gerer_modes(maintenant, &fin);
 
