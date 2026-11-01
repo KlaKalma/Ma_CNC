@@ -117,7 +117,7 @@ volatile float    reglage_u_max = 2.2f;
 volatile float    reglage_pente_max = 10.0f;
 volatile float    reglage_amorti = -1.0f;   /* >= 0 : remplace l'amorti du profil */
 volatile uint32_t reglage_molette = 0;      /* 1 : la molette regle l'amortissement */
-volatile int32_t  amorti_milli = 5;         /* mV.s/rad, un cran de molette = 1 */
+volatile int32_t  amorti_milli = 10;        /* mV.s/rad, un cran de molette = 1 */
 volatile float    v_max = 60.0f;
 volatile float    vdc = 4.6f;          /* apres la diode de la carte, estime */
 
@@ -1036,7 +1036,7 @@ static Profil profil_base(void)
   Profil p;
   memset(&p, 0, sizeof(p));
   p.bascule = 1.1f;
-  p.amorti = 0.005f;   /* au-dessus de 35 mV.s/rad, la rotation devient lourde */
+  p.amorti = 0.01f;   /* au-dessus de 35 mV.s/rad, la rotation devient lourde */
   p.clic_ms = 1.0f;
   p.fort_bascule = 1.6f;
   p.fort_clic_ms = 2.0f;
@@ -1151,7 +1151,7 @@ static void executer(uint32_t c, uint32_t *fin)
       break;
     case 14: p = profil_retour_centre(30.0f, 8.0f); break;
     case 15: p = profil_borne(10, 54.0f, 1.05f, 8.0f, 1.5f); break;
-    case 16: p = profil_base(); p.amorti = 0.0f; break;
+    case 16: p = profil_base(); break;
     default:
       mode_ = M_COUPE;
       phase = 0;
@@ -1159,6 +1159,8 @@ static void executer(uint32_t c, uint32_t *fin)
       return;
   }
   profil_actuel = c;
+  amorti_milli = (int32_t)lroundf(p.amorti * 1000.0f);
+  reglage_amorti = -1.0f;
   charger_profil(&p);
   *fin = HAL_GetTick() + duree_s * 1000U;
 }
