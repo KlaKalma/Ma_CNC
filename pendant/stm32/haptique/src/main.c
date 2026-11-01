@@ -79,6 +79,9 @@ static const SortiePwm SORTIES[NB_PWM] = {
 #define BROCHE_MIN     200
 #define BROCHE_SEUIL   2000             /* pas de 100 en dessous, de 1000 au-dessus */
 #define BROCHE_MAX     18000
+#define BROCHE_X_SEUIL 18.0f            /* pas de vibration : 18 de 100, puis 16 de 1000 */
+#define BROCHE_X_MAX   34.0f
+#define BROCHE_JEU     0.05f            /* evite de vibrer sur place autour d'une valeur ronde */
 #define NB_HIST     64U
 #define NB_SIN      1024U
 #define MAX_CRC_SUITE 500U              /* 10 ms sans lecture valide */
@@ -105,6 +108,7 @@ typedef struct {
   int32_t nb_crans;    /* 0 = rotation infinie */
   float   mur;         /* V/rad au-dela de la plage */
   float   amorti;      /* V.s/rad */
+  int32_t continu;     /* 1 : aucune force, une vibration a chaque valeur ronde */
   float   genou;       /* V, atteints vite pres du cran pour vaincre les frottements ; 0 = rien */
   float   clic;        /* V, impulsion biphasique au passage */
   float   clic_ms;
@@ -190,7 +194,8 @@ static volatile float k_res_ = 0.0f, d_res_ = 0.0f, consigne_ = 0.0f;
 static volatile float vec_mag_ = 0.0f, vec_dlt_ = 0.0f;
 static int16_t cog_[512];
 static volatile uint32_t cog_actif_ = 0;
-static volatile int32_t sens_sans_clic_ = 0;   /* pas de vibration vers une limite atteinte */
+static volatile float broche_x_ = 0.0f;   /* position en pas de vibration ; 0 = BROCHE_MIN */
+static float rel_prec_ = 0.0f;
 static int mesure_premier_ = 1;
 static float mesure_somme_u2_ = 0.0f;
 static int32_t mesure_min_ = 0, mesure_max_ = 0;
@@ -414,10 +419,47 @@ static inline int est_fort(int32_t c)
   return n > 0 && ((c % n) + n) % n == 0;
 }
 
+static void demarrer_clic(void)
+{
+  mesure_crans++;
+  const int fort = est_fort(cran_) && p_.fort_clic > 0.0f;  /* cran d'ARRIVEE */
+  clic_amp_ = fort ? p_.fort_clic : p_.clic;
+  if (clic_amp_ > 0.0f) {
+    clic_moitie_ = (int32_t)((fort ? p_.fort_clic_ms : p_.clic_ms) * 1e-3f / TS + 0.5f);
+    if (clic_moitie_ < 1) {
+      clic_moitie_ = 1;
+    }
+    clic_n_ = 2 * clic_moitie_;
+  }
+}
+
+/* La limite laisse depasser un peu x, pour vibrer aussi en arrivant sur 200 et 18000. */
+static void suivre_broche(void)
+{
+  float x = broche_x_ + (float)ecran_sens * (rel_ - rel_prec_) / p_.largeur;
+  rel_prec_ = rel_;
+  const float jeu = 2.0f * BROCHE_JEU;
+  x = (x < -jeu) ? -jeu : (x > BROCHE_X_MAX + jeu) ? BROCHE_X_MAX + jeu : x;
+  broche_x_ = x;
+  if (x >= (float)(cran_ + 1) + BROCHE_JEU) {
+    cran_++;
+    clic_sens_ = ecran_sens;
+    demarrer_clic();
+  } else if (x < (float)cran_ - BROCHE_JEU) {
+    cran_--;
+    clic_sens_ = -ecran_sens;
+    demarrer_clic();
+  }
+}
+
 static float loi(void)
 {
   const float d = (reglage_amorti >= 0.0f) ? reglage_amorti : p_.amorti;
   const float d_terme = -d * vit_;
+  if (p_.continu) {
+    suivre_broche();
+    return d_terme;
+  }
   if (p_.largeur <= 0.0f) {
     return d_terme;
   }
@@ -438,16 +480,7 @@ static float loi(void)
     clic_sens_ = -1;
   }
   if (evt) {
-    mesure_crans++;
-    const int fort = est_fort(cran_) && p_.fort_clic > 0.0f;  /* cran d'ARRIVEE */
-    clic_amp_ = (clic_sens_ == sens_sans_clic_) ? 0.0f : fort ? p_.fort_clic : p_.clic;
-    if (clic_amp_ > 0.0f) {
-      clic_moitie_ = (int32_t)((fort ? p_.fort_clic_ms : p_.clic_ms) * 1e-3f / TS + 0.5f);
-      if (clic_moitie_ < 1) {
-        clic_moitie_ = 1;
-      }
-      clic_n_ = 2 * clic_moitie_;
-    }
+    demarrer_clic();
   }
   e = rel_ - (float)cran_ * w;
 
@@ -1061,8 +1094,9 @@ static void charger_profil(const Profil *p)
   p_ = q;
   pente_ = pente;
   zero_acc_ = acc_;
-  cran_ = 0;
+  cran_ = q.continu ? (int32_t)floorf(broche_x_) : 0;
   rel_ = 0.0f;
+  rel_prec_ = 0.0f;
   clic_n_ = 0;
   mode_ = M_LOI;
   __enable_irq();
@@ -1092,9 +1126,12 @@ static void executer(uint32_t c, uint32_t *fin)
       p.genou = 0.4f;
       break;
     case 14: p = profil_retour_centre(30.0f, 8.0f); break;
-    case 15: p = profil_borne(10, 54.0f, 1.05f, 8.0f, 1.5f); break;
+    case 15: p = profil_borne(10, 27.0f, 1.05f, 8.0f, 1.5f); break;
     case 16: p = profil_base(); break;
-    case 17: p = profil_crans(24, 0.0f, 1.0f); break;
+    case 17:
+      p = profil_crans(24, 0.0f, 1.0f);
+      p.continu = 1;
+      break;
     default:
       mode_ = M_COUPE;
       phase = 0;
@@ -1117,18 +1154,19 @@ typedef struct {
   uint8_t r, g, b;
   float arc_deg;     /* course dessinee sur l'anneau, de part et d'autre du haut ; 0 = aucune */
   float centre_deg;  /* angle moteur, depuis le chargement du mode, place en haut de l'ecran */
+  float butee_deg;   /* butees, de part et d'autre du haut, en points blancs ; 0 = aucune */
 } ModeUi;
 
 /* Meme ordre que Ecran. */
 static const ModeUi MODES[] = {
-  { 11, "Axe",            "",               255,  90,  70,  0.0f,  0.0f },
-  { 10, "Menu",           "",                70, 170, 255,  0.0f,  0.0f },
-  { 13, "Interrupteur",   "",               255, 190,  40, 45.0f, 45.0f },
-  { 14, "Retour centre",  "Vitesse de jog",  80, 220, 130, 30.0f,  0.0f },
-  { 17, "Broche",         "tr/min",         255, 120, 170,  0.0f,  0.0f },
-  { 15, "But\xE9" "es",   "10 crans",       200, 120, 255,  0.0f,  0.0f },
-  { 16, "Libre",          "Sans cran",      120, 220, 230,  0.0f,  0.0f },
-  { 11, "Debug",          "",               170, 170, 170,  0.0f,  0.0f },
+  { 11, "Axe",            "",               255,  90,  70,  0.0f,  0.0f,  0.0f },
+  { 10, "Menu",           "",                70, 170, 255,  0.0f,  0.0f,  0.0f },
+  { 13, "Interrupteur",   "",               255, 190,  40, 45.0f, 45.0f, 90.0f },
+  { 14, "Retour centre",  "Vitesse de jog",  80, 220, 130, 30.0f,  0.0f, 30.0f },
+  { 17, "Broche",         "tr/min",         255, 120, 170,  0.0f,  0.0f,  0.0f },
+  { 15, "But\xE9" "es",   "10 crans",       200, 120, 255, 135.0f, 13.5f, 135.0f },
+  { 16, "Libre",          "Sans cran",      120, 220, 230,  0.0f,  0.0f,  0.0f },
+  { 11, "Debug",          "",               170, 170, 170,  0.0f,  0.0f,  0.0f },
 };
 #define NB_MODES ((int32_t)(sizeof(MODES) / sizeof(MODES[0])))
 
@@ -1292,6 +1330,9 @@ static void anneau_rect(int x0, int y0, int x1, int y1, float px, float py, cons
   const float ca = cosf(arc);
   const float bout_x = ANNEAU_R * sinf(arc);
   const float bout_y = -ANNEAU_R * ca;
+  const float butee = m->butee_deg * DEG;
+  const float butee_x = ANNEAU_R * sinf(butee);
+  const float butee_y = -ANNEAU_R * cosf(butee);
   for (int y = y0; y <= y1; y++) {
     const float fy = (float)y + 0.5f;
     const float ry = fy - 120.0f;
@@ -1299,7 +1340,7 @@ static void anneau_rect(int x0, int y0, int x1, int y1, float px, float py, cons
       const float fx = (float)x + 0.5f;
       const float rx = fx - 120.0f;
       const float r2 = rx * rx + ry * ry;
-      float a = 0.0f, ad = 0.0f, am = 0.0f;
+      float a = 0.0f, ad = 0.0f, am = 0.0f, ab = 0.0f;
       if (r2 > r_min && r2 < r_max) {
         const float r = sqrtf(r2);
         a = 1.5f - fabsf(r - ANNEAU_R);
@@ -1317,14 +1358,22 @@ static void anneau_rect(int x0, int y0, int x1, int y1, float px, float py, cons
           am = (ab > am) ? ab : am;
         }
       }
+      if (butee > 0.0f) {
+        const float bx = fabsf(rx) - butee_x, by = ry - butee_y;
+        const float b2 = bx * bx + by * by;
+        if (b2 < 25.0f) {
+          ab = 4.5f - sqrtf(b2);
+          ab = (ab > 1.0f) ? 1.0f : ab;
+        }
+      }
       const float dx = fx - px, dy = fy - py;
       const float d2 = dx * dx + dy * dy;
       if (d2 < p2) {
         ad = POINT_R - sqrtf(d2) + 0.5f;
         ad = (ad < 0.0f) ? 0.0f : (ad > 1.0f) ? 1.0f : ad;
       }
-      const float fond = 70.0f * a * (1.0f - am) * (1.0f - ad);
-      const float teinte = ad + 0.6f * am * (1.0f - ad);
+      const float fond = (70.0f * a * (1.0f - am) * (1.0f - ab) + 255.0f * ab) * (1.0f - ad);
+      const float teinte = ad + 0.6f * am * (1.0f - ab) * (1.0f - ad);
       ligne_[x - x0] = pixel((uint32_t)(fond + teinte * (float)m->r),
                              (uint32_t)(fond + teinte * (float)m->g),
                              (uint32_t)(fond + teinte * (float)m->b));
@@ -1477,7 +1526,6 @@ static void gerer_modes(uint32_t maintenant, uint32_t *fin)
   duree_s = d;
   attendre_iterations(1);   /* cran repart de 0 */
   cran_prec_ = 0;
-  sens_sans_clic_ = 0;
   menu_pos_ = menu_base_;
   cle_zone_ = 0xFFFFFFFFU;
   point_force_ = 1;
@@ -1549,20 +1597,18 @@ static void afficher(uint32_t maintenant)
       break;
     }
     case E_BROCHE: {
-      int32_t pas = ecran_sens * (cr - cran_prec_);
-      cran_prec_ = cr;
-      int32_t v = broche_tr_min;
-      for (; pas > 0 && v < BROCHE_MAX; pas--) {
-        v += (v < BROCHE_SEUIL) ? 100 : 1000;
+      const float x = broche_x_;
+      float v = (x < BROCHE_X_SEUIL) ? (float)BROCHE_MIN + 100.0f * x
+                                     : (float)BROCHE_SEUIL + 1000.0f * (x - BROCHE_X_SEUIL);
+      v = (v < (float)BROCHE_MIN) ? (float)BROCHE_MIN : (v > (float)BROCHE_MAX) ? (float)BROCHE_MAX : v;
+      /* Affichage au tr/min pres en bas, a 10 pres en haut, sans clignoter entre deux valeurs. */
+      const float pas = (v < (float)BROCHE_SEUIL) ? 1.0f : 10.0f;
+      if (fabsf(v - (float)broche_tr_min) >= 0.75f * pas) {
+        broche_tr_min = (int32_t)(lroundf(v / pas) * (long)pas);
       }
-      for (; pas < 0 && v > BROCHE_MIN; pas++) {
-        v -= (v <= BROCHE_SEUIL) ? 100 : 1000;
-      }
-      broche_tr_min = v;
-      sens_sans_clic_ = (v >= BROCHE_MAX) ? ecran_sens : (v <= BROCHE_MIN) ? -ecran_sens : 0;
-      cle = (uint32_t)v;
+      cle = (uint32_t)broche_tr_min;
       if (cle != cle_zone_) {
-        texte_entier(v, t);
+        texte_entier(broche_tr_min, t);
         dessiner_mode(m, t);
       }
       break;
