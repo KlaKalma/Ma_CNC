@@ -433,23 +433,28 @@ static void demarrer_clic(void)
   }
 }
 
-/* La limite laisse depasser un peu x, pour vibrer aussi en arrivant sur 200 et 18000. */
-static void suivre_broche(void)
+/* Rend la force du mur si x depasse 200 ou 18000. Le dernier cran vibre en y arrivant. */
+static float suivre_broche(void)
 {
-  float x = broche_x_ + (float)ecran_sens * (rel_ - rel_prec_) / p_.largeur;
+  const float x = broche_x_ + (float)ecran_sens * (rel_ - rel_prec_) / p_.largeur;
   rel_prec_ = rel_;
-  const float jeu = 2.0f * BROCHE_JEU;
-  x = (x < -jeu) ? -jeu : (x > BROCHE_X_MAX + jeu) ? BROCHE_X_MAX + jeu : x;
   broche_x_ = x;
-  if (x >= (float)(cran_ + 1) + BROCHE_JEU) {
+  if (x >= (float)(cran_ + 1) + BROCHE_JEU && cran_ < (int32_t)BROCHE_X_MAX) {
     cran_++;
     clic_sens_ = ecran_sens;
     demarrer_clic();
-  } else if (x < (float)cran_ - BROCHE_JEU) {
+  } else if (x < (float)cran_ - BROCHE_JEU && cran_ > -1) {
     cran_--;
     clic_sens_ = -ecran_sens;
     demarrer_clic();
   }
+  if (x > BROCHE_X_MAX) {
+    return -(float)ecran_sens * p_.mur * (x - BROCHE_X_MAX) * p_.largeur;
+  }
+  if (x < 0.0f) {
+    return -(float)ecran_sens * p_.mur * x * p_.largeur;
+  }
+  return 0.0f;
 }
 
 static float loi(void)
@@ -457,8 +462,7 @@ static float loi(void)
   const float d = (reglage_amorti >= 0.0f) ? reglage_amorti : p_.amorti;
   const float d_terme = -d * vit_;
   if (p_.continu) {
-    suivre_broche();
-    return d_terme;
+    return suivre_broche() + d_terme;
   }
   if (p_.largeur <= 0.0f) {
     return d_terme;
@@ -1131,6 +1135,7 @@ static void executer(uint32_t c, uint32_t *fin)
     case 17:
       p = profil_crans(24, 0.0f, 1.0f);
       p.continu = 1;
+      p.mur = 8.0f;
       break;
     default:
       mode_ = M_COUPE;
@@ -1154,19 +1159,22 @@ typedef struct {
   uint8_t r, g, b;
   float arc_deg;     /* course dessinee sur l'anneau, de part et d'autre du haut ; 0 = aucune */
   float centre_deg;  /* angle moteur, depuis le chargement du mode, place en haut de l'ecran */
-  float butee_deg;   /* butees, de part et d'autre du haut, en points blancs ; 0 = aucune */
+  float butee_deg;   /* positions extremes, de part et d'autre du haut, en blanc ; 0 = aucune */
+  float cran_debut_deg;  /* angle du premier point de cran, a l'ecran */
+  float cran_pas_deg;
+  int32_t cran_nb;       /* 0 = aucun point */
 } ModeUi;
 
 /* Meme ordre que Ecran. */
 static const ModeUi MODES[] = {
-  { 11, "Axe",            "",               255,  90,  70,  0.0f,  0.0f,  0.0f },
-  { 10, "Menu",           "",                70, 170, 255,  0.0f,  0.0f,  0.0f },
-  { 13, "Interrupteur",   "",               255, 190,  40, 45.0f, 45.0f, 90.0f },
-  { 14, "Retour centre",  "Vitesse de jog",  80, 220, 130, 30.0f,  0.0f, 30.0f },
-  { 17, "Broche",         "tr/min",         255, 120, 170,  0.0f,  0.0f,  0.0f },
-  { 15, "But\xE9" "es",   "10 crans",       200, 120, 255, 135.0f, 13.5f, 135.0f },
-  { 16, "Libre",          "Sans cran",      120, 220, 230,  0.0f,  0.0f,  0.0f },
-  { 11, "Debug",          "",               170, 170, 170,  0.0f,  0.0f,  0.0f },
+  { 11, "Axe",            "",               255,  90,  70,  0.0f,  0.0f,  0.0f, -180.0f, 36.0f, 10 },
+  { 10, "Menu",           "",                70, 170, 255,  0.0f,  0.0f,  0.0f, -180.0f, 12.0f, 30 },
+  { 13, "Interrupteur",   "",               255, 190,  40, 45.0f, 45.0f, 45.0f,    0.0f,  0.0f,  0 },
+  { 14, "Retour centre",  "Vitesse de jog",  80, 220, 130, 30.0f,  0.0f, 30.0f,    0.0f,  0.0f,  0 },
+  { 17, "Broche",         "tr/min",         255, 120, 170,  0.0f,  0.0f,  0.0f, -180.0f, 15.0f, 24 },
+  { 15, "But\xE9" "es",   "10 crans",       200, 120, 255, 121.5f, 13.5f, 121.5f, -121.5f, 27.0f, 10 },
+  { 16, "Libre",          "Sans cran",      120, 220, 230,  0.0f,  0.0f,  0.0f,    0.0f,  0.0f,  0 },
+  { 11, "Debug",          "",               170, 170, 170,  0.0f,  0.0f,  0.0f,    0.0f,  0.0f,  0 },
 };
 #define NB_MODES ((int32_t)(sizeof(MODES) / sizeof(MODES[0])))
 
@@ -1179,9 +1187,22 @@ static const char *const MENU[] = {
 #define MODE_STABLE_MS   150U
 #define PAS_AXE_UM       10
 #define MENU_ECART       38.0f
+#define NB_ETIQUETTES    8
+#define ETIQUETTE_R      80.0f
+#define ETIQUETTE_L      46
+#define ETIQUETTE_H      16
+#define BROCHE_VITESSE_L 104
+#define BROCHE_VITESSE_H 46
+#define BROCHE_UNITE_L   60
+#define BROCHE_UNITE_H   16
 #define JOG_ZONE_MORTE   (1.5f * DEG)   /* le moteur peut s'y arreter, retenu par les frottements */
 
 static uint16_t zone_[ZONE * ZONE];
+static int dest_l_ = ZONE, dest_h_ = ZONE;   /* zone_ peut servir a dessiner plus petit */
+static float cran_phase_deg_ = 0.0f;
+static int point_blanc_ = 0;              /* limite de broche visible : 0 aucune, 1 basse, 2 haute */
+static float blanc_x_ = 0.0f, blanc_y_ = 0.0f;
+static int32_t etiquette_[NB_ETIQUETTES];
 static int32_t mode_voulu_ = 0, mode_charge_ = -1;
 static uint32_t mode_t_ = 0;
 static int32_t cran_prec_ = 0;
@@ -1247,8 +1268,8 @@ static void texte(const Police *f, const char *s, float x, float yc, float ech, 
     int xa = (int)ceilf(ox), xb = (int)ceilf(ox + (float)gl->l * ech);
     if (ya < 0) { ya = 0; }
     if (xa < 0) { xa = 0; }
-    if (yb > ZONE) { yb = ZONE; }
-    if (xb > ZONE) { xb = ZONE; }
+    if (yb > dest_h_) { yb = dest_h_; }
+    if (xb > dest_l_) { xb = dest_l_; }
     for (int py = ya; py < yb; py++) {
       const float sy = ((float)py - oy) * inv;
       const int iy = (int)sy;
@@ -1264,7 +1285,7 @@ static void texte(const Police *f, const char *s, float x, float yc, float ech, 
         const float h1 = (float)l1[ix] + fx * (float)(l1[ix1] - l1[ix]);
         const uint32_t a = (uint32_t)(h0 + fy * (h1 - h0) + 0.5f);
         if (a) {
-          zone_[py * ZONE + px] = pal[a];
+          zone_[py * dest_l_ + px] = pal[a];
         }
       }
     }
@@ -1308,6 +1329,22 @@ static void texte_mm(int32_t um, char *b)
   *b = 0;
 }
 
+static void dessiner_dans(int l, int h)
+{
+  dest_l_ = l;
+  dest_h_ = h;
+  memset(zone_, 0, (size_t)(l * h) * sizeof(zone_[0]));
+}
+
+static void envoyer_dessin(int x, int y)
+{
+  ouvrir_zone((uint16_t)x, (uint16_t)y, (uint16_t)(x + dest_l_ - 1), (uint16_t)(y + dest_h_ - 1));
+  envoi_dma((const uint8_t *)zone_, (uint32_t)(dest_l_ * dest_h_) * 2U);
+  CS_PORT->BSRR = CS_PIN;
+  dest_l_ = ZONE;
+  dest_h_ = ZONE;
+}
+
 static void envoyer_zone(void)
 {
   ouvrir_zone(ZONE_X0, ZONE_X0, ZONE_X0 + ZONE - 1, ZONE_X0 + ZONE - 1);
@@ -1333,6 +1370,10 @@ static void anneau_rect(int x0, int y0, int x1, int y1, float px, float py, cons
   const float butee = m->butee_deg * DEG;
   const float butee_x = ANNEAU_R * sinf(butee);
   const float butee_y = -ANNEAU_R * cosf(butee);
+  const float cran_min = (ANNEAU_R - 4.0f) * (ANNEAU_R - 4.0f);
+  const float cran_max = (ANNEAU_R + 4.0f) * (ANNEAU_R + 4.0f);
+  const int cran_tour = ((float)m->cran_nb * m->cran_pas_deg >= 360.0f);
+  const float cran_debut = m->cran_debut_deg + cran_phase_deg_;
   for (int y = y0; y <= y1; y++) {
     const float fy = (float)y + 0.5f;
     const float ry = fy - 120.0f;
@@ -1340,7 +1381,7 @@ static void anneau_rect(int x0, int y0, int x1, int y1, float px, float py, cons
       const float fx = (float)x + 0.5f;
       const float rx = fx - 120.0f;
       const float r2 = rx * rx + ry * ry;
-      float a = 0.0f, ad = 0.0f, am = 0.0f, ab = 0.0f;
+      float a = 0.0f, ad = 0.0f, am = 0.0f, ab = 0.0f, ac = 0.0f;
       if (r2 > r_min && r2 < r_max) {
         const float r = sqrtf(r2);
         a = 1.5f - fabsf(r - ANNEAU_R);
@@ -1366,14 +1407,38 @@ static void anneau_rect(int x0, int y0, int x1, int y1, float px, float py, cons
           ab = (ab > 1.0f) ? 1.0f : ab;
         }
       }
+      if (m->cran_nb > 0 && r2 > cran_min && r2 < cran_max) {
+        const float r = sqrtf(r2);
+        const float th = atan2f(rx, -ry) / DEG;
+        int32_t k = (int32_t)lroundf((th - cran_debut) / m->cran_pas_deg);
+        if (!cran_tour) {
+          k = (k < 0) ? 0 : (k >= m->cran_nb) ? m->cran_nb - 1 : k;
+        }
+        const float dt = (th - (cran_debut + (float)k * m->cran_pas_deg)) * DEG * r;
+        const float dr = r - ANNEAU_R;
+        const float c2 = dt * dt + dr * dr;
+        if (c2 < 9.0f) {
+          ac = 2.5f - sqrtf(c2);
+          ac = (ac < 0.0f) ? 0.0f : (ac > 1.0f) ? 1.0f : ac;
+        }
+      }
+      if (point_blanc_) {
+        const float bx = fx - blanc_x_, by = fy - blanc_y_;
+        const float b2 = bx * bx + by * by;
+        if (b2 < 25.0f) {
+          ab = 4.5f - sqrtf(b2);
+          ab = (ab > 1.0f) ? 1.0f : ab;
+        }
+      }
       const float dx = fx - px, dy = fy - py;
       const float d2 = dx * dx + dy * dy;
       if (d2 < p2) {
         ad = POINT_R - sqrtf(d2) + 0.5f;
         ad = (ad < 0.0f) ? 0.0f : (ad > 1.0f) ? 1.0f : ad;
       }
-      const float fond = (70.0f * a * (1.0f - am) * (1.0f - ab) + 255.0f * ab) * (1.0f - ad);
-      const float teinte = ad + 0.6f * am * (1.0f - ab) * (1.0f - ad);
+      const float fond = (70.0f * a * (1.0f - am) * (1.0f - ac) * (1.0f - ab) + 255.0f * ab) * (1.0f - ad);
+      const float couleur = (ac > 0.6f * am) ? ac : 0.6f * am;
+      const float teinte = ad + couleur * (1.0f - ab) * (1.0f - ad);
       ligne_[x - x0] = pixel((uint32_t)(fond + teinte * (float)m->r),
                              (uint32_t)(fond + teinte * (float)m->g),
                              (uint32_t)(fond + teinte * (float)m->b));
@@ -1449,12 +1514,63 @@ static void dessiner_inter(const ModeUi *m, int on)
   memset(zone_, 0, sizeof(zone_));
   texte(&P18, "OFF", off_gauche ? 24.0f : 126.0f, 18.0f, 1.0f, 0, on ? 90 : m->r, on ? 90 : m->g, on ? 90 : m->b, 0);
   texte(&P18, "ON", off_gauche ? 126.0f : 24.0f, 18.0f, 1.0f, 0, on ? m->r : 90, on ? m->g : 90, on ? m->b : 90, 0);
-  texte(&P30, m->nom, 75.0f, 50.0f, 0.75f, 0, m->r, m->g, m->b, 0);
-  texte(&P30, on ? "ON" : "OFF", 75.0f, 88.0f, 1.0f, 0, 255, 255, 255, 0);
-  if (on == off_gauche) {
-    texte(&P18, on ? "< vers OFF" : "< vers ON", 75.0f, 122.0f, 1.0f, 0, 170, 170, 170, 0);
-  } else {
-    texte(&P18, on ? "vers OFF >" : "vers ON >", 75.0f, 122.0f, 1.0f, 0, 170, 170, 170, 0);
+  texte(&P30, m->nom, 75.0f, 62.0f, 0.75f, 0, m->r, m->g, m->b, 0);
+  texte(&P30, on ? "ON" : "OFF", 75.0f, 100.0f, 1.0f, 0, 255, 255, 255, 0);
+}
+
+static int32_t broche_valeur(int32_t k)
+{
+  return (k < (int32_t)BROCHE_X_SEUIL) ? BROCHE_MIN + 100 * k
+                                       : BROCHE_SEUIL + 1000 * (k - (int32_t)BROCHE_X_SEUIL);
+}
+
+/* Valeurs en face des points, un point sur trois : un demi-tour de chaque cote du moteur.
+ * Les points restent en place, seuls les textes changent, a l'oppose du moteur. */
+static void dessiner_etiquettes(float x, float rel)
+{
+  const float moteur = (float)ecran_sens * rel / DEG;
+  for (int j = 0; j < NB_ETIQUETTES; j++) {
+    const float ang = -180.0f + cran_phase_deg_ + 45.0f * (float)j;
+    float d = ang - moteur;
+    d -= 360.0f * roundf(d / 360.0f);
+    const int32_t k = (int32_t)lroundf(x + d / 15.0f);
+    const int32_t v = (k >= 0 && k <= (int32_t)BROCHE_X_MAX) ? broche_valeur(k) : -1;
+    if (v == etiquette_[j]) {
+      continue;
+    }
+    etiquette_[j] = v;
+    dessiner_dans(ETIQUETTE_L, ETIQUETTE_H);
+    if (v >= 0) {
+      char t[12];
+      texte_entier(v, t);
+      texte(&P18, t, 0.5f * (float)ETIQUETTE_L, 0.5f * (float)ETIQUETTE_H, 0.8f, 0, 170, 170, 170, 1);
+    }
+    const float a = ang * DEG;
+    envoyer_dessin((int)(120.0f + ETIQUETTE_R * sinf(a)) - ETIQUETTE_L / 2,
+                   (int)(120.0f - ETIQUETTE_R * cosf(a)) - ETIQUETTE_H / 2);
+  }
+}
+
+/* Une limite s'affiche des qu'elle entre dans le demi-tour visible de chaque cote. */
+static void afficher_limite(const ModeUi *m, float x, float rel)
+{
+  const int b = (x * 15.0f <= 180.0f) ? 1 : ((BROCHE_X_MAX - x) * 15.0f <= 180.0f) ? 2 : 0;
+  if (b == point_blanc_) {
+    return;
+  }
+  const int m_r = 7;
+  const int ax = (int)blanc_x_, ay = (int)blanc_y_, avait = (point_blanc_ != 0);
+  point_blanc_ = b;
+  float px, py;
+  point_position(m, &px, &py);
+  if (avait) {
+    anneau_rect(ax - m_r, ay - m_r, ax + m_r, ay + m_r, px, py, m);
+  }
+  if (b) {
+    const float a = ((float)ecran_sens * rel / DEG + 15.0f * (((b == 1) ? 0.0f : BROCHE_X_MAX) - x)) * DEG;
+    blanc_x_ = 120.0f + ANNEAU_R * sinf(a);
+    blanc_y_ = 120.0f - ANNEAU_R * cosf(a);
+    anneau_rect((int)blanc_x_ - m_r, (int)blanc_y_ - m_r, (int)blanc_x_ + m_r, (int)blanc_y_ + m_r, px, py, m);
   }
 }
 
@@ -1527,6 +1643,12 @@ static void gerer_modes(uint32_t maintenant, uint32_t *fin)
   attendre_iterations(1);   /* cran repart de 0 */
   cran_prec_ = 0;
   menu_pos_ = menu_base_;
+  point_blanc_ = 0;
+  /* Point en face de la valeur ronde : le decalage depend de la valeur en entrant. */
+  cran_phase_deg_ = (voulu == E_BROCHE) ? 15.0f * (ceilf(broche_x_) - broche_x_) : 0.0f;
+  for (int j = 0; j < NB_ETIQUETTES; j++) {
+    etiquette_[j] = -2;
+  }
   cle_zone_ = 0xFFFFFFFFU;
   point_force_ = 1;
 }
@@ -1606,10 +1728,18 @@ static void afficher(uint32_t maintenant)
       if (fabsf(v - (float)broche_tr_min) >= 0.75f * pas) {
         broche_tr_min = (int32_t)(lroundf(v / pas) * (long)pas);
       }
+      dessiner_etiquettes(x, rel);
+      afficher_limite(m, x, rel);
       cle = (uint32_t)broche_tr_min;
       if (cle != cle_zone_) {
+        cle_zone_ = cle;
+        dessiner_dans(BROCHE_VITESSE_L, BROCHE_VITESSE_H);
         texte_entier(broche_tr_min, t);
-        dessiner_mode(m, t);
+        texte(&P34, t, 0.5f * (float)BROCHE_VITESSE_L, 0.5f * (float)BROCHE_VITESSE_H, 1.0f, 0, m->r, m->g, m->b, 1);
+        envoyer_dessin(120 - BROCHE_VITESSE_L / 2, 120 - BROCHE_VITESSE_H / 2);
+        dessiner_dans(BROCHE_UNITE_L, BROCHE_UNITE_H);
+        texte(&P18, m->detail, 0.5f * (float)BROCHE_UNITE_L, 0.5f * (float)BROCHE_UNITE_H, 0.8f, 0, 170, 170, 170, 0);
+        envoyer_dessin(120 - BROCHE_UNITE_L / 2, 146);
       }
       break;
     }

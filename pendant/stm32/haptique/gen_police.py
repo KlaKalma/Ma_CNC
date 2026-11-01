@@ -10,7 +10,7 @@ TEXTE = "".join(chr(c) for c in range(32, 127)) + "\xE9\xE8\xEA\xE0"
 # Cette police n'a pas d'accents : ils sont traces au-dessus de la lettre de base.
 ACCENTS = {"\xE9": ("e", ((0.35, 1.0), (0.65, 0.0))), "\xE8": ("e", ((0.35, 0.0), (0.65, 1.0))),
            "\xEA": ("e", ((0.2, 1.0), (0.5, 0.0), (0.8, 1.0))), "\xE0": ("a", ((0.35, 0.0), (0.65, 1.0)))}
-POLICES = [("P18", 18, TEXTE), ("P30", 30, TEXTE), ("P72", 72, "XYZ")]
+POLICES = [("P18", 18, TEXTE), ("P30", 30, TEXTE), ("P34", 34, "0123456789"), ("P72", 72, "XYZ")]
 
 sortie = ["/* Genere par gen_police.py, ne pas modifier a la main. */", "#pragma once", "#include <stdint.h>", "",
           "typedef struct { uint8_t l, h; int8_t x, y; uint8_t av; uint32_t pos; } Glyphe;",
