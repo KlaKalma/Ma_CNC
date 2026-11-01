@@ -3,11 +3,16 @@
  *
  * Meme loi de crans, meme calage et meme carte de cogging que la bibliotheque
  * validee sur UNO R4, mais le capteur est en SSI et la boucle tourne dans
- * l'interruption de la PWM : 25 kHz au lieu de 2 kHz.
+ * l'interruption de la PWM, deux fois par periode : 50 kHz au lieu de 2 kHz, avec un
+ * decoupage qui reste a 25 kHz. Le programme principal gere l'ecran et la molette.
  *
  * Brochage (netlist du PCB) :
  *   UH PA8, UL PB13, VH PA9, VL PB14, WH PA10, WL PB15, DIAG PB12
  *   MT6701 en SSI, SPI3 : CLK PB3, DO PB4, CSN PB10
+ *   Ecran GC9A01, SPI1 : SCK PA5, MOSI PA7, CS PA4, DC PB0, RST PB1
+ *   Molette, TIM2 : A PA0, B PA1
+ *
+ * A l'ecran : A angle, M molette en crans, C cran du moteur, E erreurs CRC.
  *
  * Pilotage par le debogueur : ecrire duree_s puis commande.
  *   1 calage, 2 cogging, 3 calage + cogging (moteur libre, sans y toucher)
@@ -16,11 +21,13 @@
  *
  * Coupure : a la fin de duree_s, si DIAG monte, si le capteur ne repond plus
  * pendant 10 ms, sur faute du processeur et a l'arret du debogueur.
- * La calibration reste en RAM : elle est perdue au redemarrage.
+ * La calibration complete est rangee dans la derniere page de la flash et relue au
+ * demarrage. A refaire si le moteur, l'aimant ou le capteur est demonte.
  */
 
 #include "stm32g4xx_hal.h"
 #include <math.h>
+#include <stddef.h>
 #include <string.h>
 
 #define NB_PWM 6
@@ -46,11 +53,17 @@ static const SortiePwm SORTIES[NB_PWM] = {
 #define CSN_PIN  GPIO_PIN_10
 #define LED_PORT GPIOC
 #define LED_PIN  GPIO_PIN_6
+#define CS_PORT  GPIOA
+#define CS_PIN   GPIO_PIN_4
+#define DC_PORT  GPIOB
+#define DC_PIN   GPIO_PIN_0
+#define RST_PORT GPIOB
+#define RST_PIN  GPIO_PIN_1
 
 #define PWM_ARR 3400U   /* 170 MHz / (2 * 3400) = 25 kHz, centre */
 #define PWM_DT  34U     /* 200 ns de temps mort */
 
-#define TS          40e-6f              /* periode de boucle, s */
+#define TS          20e-6f              /* periode de boucle, s */
 #define DEUX_PI     6.2831853f
 #define PI_F        3.1415927f
 #define LSB         (DEUX_PI / 16384.0f)
@@ -59,7 +72,20 @@ static const SortiePwm SORTIES[NB_PWM] = {
 #define PENTE_NOM   9.5f
 #define NB_HIST     64U
 #define NB_SIN      1024U
-#define MAX_CRC_SUITE 250U              /* 10 ms sans lecture valide */
+#define MAX_CRC_SUITE 500U              /* 10 ms sans lecture valide */
+#define ITER_PAR_MS   50U
+
+#define LARGEUR 240
+#define HAUTEUR 240
+#define NOIR    0x0000
+#define ECHELLE 4
+#define CAR_L   (6 * ECHELLE)
+#define CAR_H   (7 * ECHELLE)
+
+/* Derniere page de la banque 2 (flash en double banque, pages de 2 Ko). */
+#define CALIB_ADRESSE 0x0807F800U
+#define CALIB_PAGE    127U
+#define CALIB_MAGIC   0x47344B31U
 
 typedef struct {
   float   largeur;     /* rad entre deux crans ; 0 = aucun cran */
@@ -83,7 +109,7 @@ typedef enum { M_COUPE, M_LOI, M_RESSORT, M_VECTEUR } Mode;
 volatile uint32_t commande = 0;
 volatile uint32_t duree_s = 60;
 volatile uint32_t mesure_raz = 0;
-volatile uint32_t reglage_nv = 25;     /* base de vitesse : 25 x 40 us = 1 ms */
+volatile uint32_t reglage_nv = 50;     /* base de vitesse : 50 x 20 us = 1 ms */
 volatile float    reglage_u_max = 2.2f;
 volatile float    reglage_pente_max = 10.0f;
 volatile float    reglage_amorti = -1.0f;   /* >= 0 : remplace l'amorti du profil */
@@ -115,6 +141,12 @@ volatile int32_t  calage_amp_mdeg = 0;
 volatile uint32_t cogging_ok = 0;
 volatile uint32_t cogging_cases = 0;
 volatile int32_t  cogging_rms_mv_x10 = 0;
+
+volatile uint32_t calib_chargee = 0;
+volatile uint32_t calib_sauvee = 0;
+volatile int32_t  molette = 0;
+volatile int32_t  molette_crans = 0;
+volatile uint32_t affichage_us = 0;
 
 volatile uint32_t mesure_n = 0;
 volatile int32_t  mesure_u_rms_uv = 0;
@@ -275,7 +307,7 @@ static void init_pwm(void)
 
   TIM1->CR1 = TIM_CR1_CMS_0 | TIM_CR1_ARPE;
   TIM1->ARR = PWM_ARR;
-  TIM1->RCR = 1;
+  TIM1->RCR = 0;   /* un evenement a chaque sommet et a chaque creux : 50 kHz */
   TIM1->CCMR1 = (6U << TIM_CCMR1_OC1M_Pos) | TIM_CCMR1_OC1PE
               | (6U << TIM_CCMR1_OC2M_Pos) | TIM_CCMR1_OC2PE;
   TIM1->CCMR2 = (6U << TIM_CCMR2_OC3M_Pos) | TIM_CCMR2_OC3PE;
@@ -527,7 +559,7 @@ void TIM1_UP_TIM16_IRQHandler(void)
 
 static void attendre_iterations(uint32_t ms)
 {
-  const uint32_t n = ms * 25U;
+  const uint32_t n = ms * ITER_PAR_MS;
   const uint32_t debut = iterations;
   while (iterations - debut < n) {}
 }
@@ -693,6 +725,304 @@ static void carte_cogging(void)
   phase = 0;
 }
 
+/* --- Calibration en flash ----------------------------------------------- */
+
+typedef struct {
+  uint32_t magic;
+  float    zea;
+  int16_t  cog[512];
+  uint32_t somme;
+} Calib;
+
+static uint32_t somme_calib(const Calib *c)
+{
+  const uint8_t *d = (const uint8_t *)c;
+  uint32_t s = 0x12345678U;
+  for (uint32_t i = 0; i < offsetof(Calib, somme); i++) {
+    s = s * 31U + d[i];
+  }
+  return s;
+}
+
+static void charger_calibration(void)
+{
+  const Calib *c = (const Calib *)CALIB_ADRESSE;
+  if (c->magic != CALIB_MAGIC || c->somme != somme_calib(c)) {
+    return;
+  }
+  zea_ = c->zea;
+  zea_mrad = (int32_t)(c->zea * 1000.0f);
+  memcpy(cog_, c->cog, sizeof(cog_));
+  calage_ok = 1;
+  cogging_ok = 1;
+  cog_actif_ = 1;
+  calib_chargee = 1;
+}
+
+/* La boucle tourne depuis la banque 1 : l'ecriture en banque 2 ne la bloque pas. */
+static void sauver_calibration(void)
+{
+  static Calib c;
+  c.magic = CALIB_MAGIC;
+  c.zea = zea_;
+  memcpy(c.cog, cog_, sizeof(c.cog));
+  c.somme = somme_calib(&c);
+
+  FLASH_EraseInitTypeDef e = {0};
+  uint32_t erreur = 0;
+  e.TypeErase = FLASH_TYPEERASE_PAGES;
+  e.Banks = FLASH_BANK_2;
+  e.Page = CALIB_PAGE;
+  e.NbPages = 1;
+
+  HAL_FLASH_Unlock();
+  HAL_StatusTypeDef ok = HAL_FLASHEx_Erase(&e, &erreur);
+  const uint64_t *d = (const uint64_t *)&c;
+  for (uint32_t i = 0; ok == HAL_OK && i < (sizeof(c) + 7U) / 8U; i++) {
+    ok = HAL_FLASH_Program(FLASH_TYPEPROGRAM_DOUBLEWORD, CALIB_ADRESSE + 8U * i, d[i]);
+  }
+  HAL_FLASH_Lock();
+  calib_sauvee = (ok == HAL_OK) && (memcmp(&c, (const void *)CALIB_ADRESSE, sizeof(c)) == 0);
+}
+
+/* --- Molette ------------------------------------------------------------ */
+
+static void init_molette(void)
+{
+  __HAL_RCC_TIM2_CLK_ENABLE();
+
+  /* Pull-up au cas ou la molette serait a collecteur ouvert. */
+  GPIO_InitTypeDef g = {0};
+  g.Pin = GPIO_PIN_0 | GPIO_PIN_1;
+  g.Mode = GPIO_MODE_AF_PP;
+  g.Pull = GPIO_PULLUP;
+  g.Speed = GPIO_SPEED_FREQ_LOW;
+  g.Alternate = GPIO_AF1_TIM2;
+  HAL_GPIO_Init(GPIOA, &g);
+
+  TIM2->CR1 = TIM_CR1_CKD_1;   /* fDTS = 42,5 MHz */
+  TIM2->ARR = 0xFFFFFFFF;
+  /* Filtre fDTS/32 sur 8 echantillons, soit 6 us : ecarte les rebonds. */
+  TIM2->CCMR1 = TIM_CCMR1_CC1S_0 | TIM_CCMR1_CC2S_0
+              | (0xFU << TIM_CCMR1_IC1F_Pos) | (0xFU << TIM_CCMR1_IC2F_Pos);
+  TIM2->CCER = 0;
+  TIM2->SMCR = TIM_SMCR_SMS_0 | TIM_SMCR_SMS_1;  /* x4 */
+  TIM2->CNT = 0;
+  TIM2->CR1 |= TIM_CR1_CEN;
+}
+
+/* --- Ecran -------------------------------------------------------------- */
+
+static uint8_t ligne_[LARGEUR * 2];
+
+/* Police 5x7, un octet par rangee. */
+static const uint8_t CHIFFRES[10][7] = {
+  { 0x0E,0x11,0x11,0x11,0x11,0x11,0x0E },
+  { 0x04,0x0C,0x04,0x04,0x04,0x04,0x0E },
+  { 0x0E,0x11,0x01,0x02,0x04,0x08,0x1F },
+  { 0x0E,0x11,0x01,0x06,0x01,0x11,0x0E },
+  { 0x02,0x06,0x0A,0x12,0x1F,0x02,0x02 },
+  { 0x1F,0x10,0x1E,0x01,0x01,0x11,0x0E },
+  { 0x06,0x08,0x10,0x1E,0x11,0x11,0x0E },
+  { 0x1F,0x01,0x02,0x04,0x04,0x08,0x08 },
+  { 0x0E,0x11,0x11,0x0E,0x11,0x11,0x0E },
+  { 0x0E,0x11,0x11,0x0F,0x01,0x02,0x0C },
+};
+static const uint8_t L_A[7]     = { 0x0E,0x11,0x11,0x1F,0x11,0x11,0x11 };
+static const uint8_t L_M[7]     = { 0x11,0x1B,0x15,0x15,0x11,0x11,0x11 };
+static const uint8_t L_C[7]     = { 0x0E,0x11,0x10,0x10,0x10,0x11,0x0E };
+static const uint8_t L_E[7]     = { 0x1F,0x10,0x10,0x1E,0x10,0x10,0x1F };
+static const uint8_t L_MOINS[7] = { 0x00,0x00,0x00,0x1F,0x00,0x00,0x00 };
+static const uint8_t L_VIDE[7]  = { 0x00,0x00,0x00,0x00,0x00,0x00,0x00 };
+
+/* Sequence d'initialisation usuelle du GC9A01 : commande, nombre d'octets, octets. */
+static const uint8_t INIT_GC9A01[] = {
+  0xEF,0, 0xEB,1,0x14, 0xFE,0, 0xEF,0, 0xEB,1,0x14,
+  0x84,1,0x40, 0x85,1,0xFF, 0x86,1,0xFF, 0x87,1,0xFF, 0x88,1,0x0A, 0x89,1,0x21,
+  0x8A,1,0x00, 0x8B,1,0x80, 0x8C,1,0x01, 0x8D,1,0x01, 0x8E,1,0xFF, 0x8F,1,0xFF,
+  0xB6,2,0x00,0x00, 0x36,1,0x08, 0x3A,1,0x05, 0x90,4,0x08,0x08,0x08,0x08,
+  0xBD,1,0x06, 0xBC,1,0x00, 0xFF,3,0x60,0x01,0x04, 0xC3,1,0x13, 0xC4,1,0x13,
+  0xC9,1,0x22, 0xBE,1,0x11, 0xE1,2,0x10,0x0E, 0xDF,3,0x21,0x0C,0x02,
+  0xF0,6,0x45,0x09,0x08,0x08,0x26,0x2A, 0xF1,6,0x43,0x70,0x72,0x36,0x37,0x6F,
+  0xF2,6,0x45,0x09,0x08,0x08,0x26,0x2A, 0xF3,6,0x43,0x70,0x72,0x36,0x37,0x6F,
+  0xED,2,0x1B,0x0B, 0xAE,1,0x77, 0xCD,1,0x63,
+  0x70,9,0x07,0x07,0x04,0x0E,0x0F,0x09,0x07,0x08,0x03, 0xE8,1,0x34,
+  0x62,12,0x18,0x0D,0x71,0xED,0x70,0x70,0x18,0x0F,0x71,0xEF,0x70,0x70,
+  0x63,12,0x18,0x11,0x71,0xF1,0x70,0x70,0x18,0x13,0x71,0xF3,0x70,0x70,
+  0x64,7,0x28,0x29,0xF1,0x01,0xF1,0x00,0x07,
+  0x66,10,0x3C,0x00,0xCD,0x67,0x45,0x45,0x10,0x00,0x00,0x00,
+  0x67,10,0x00,0x3C,0x00,0x00,0x00,0x01,0x54,0x10,0x32,0x98,
+  0x74,7,0x10,0x85,0x80,0x00,0x00,0x4E,0x00, 0x98,2,0x3E,0x07, 0x35,0, 0x21,0,
+};
+
+static void attendre_fin_envoi(void)
+{
+  while (SPI1->SR & SPI_SR_FTLVL) {}
+  while (SPI1->SR & SPI_SR_BSY) {}
+}
+
+static void config_ecran_spi(uint32_t br)
+{
+  attendre_fin_envoi();
+  SPI1->CR1 = 0;
+  SPI1->CR2 = (7U << SPI_CR2_DS_Pos) | SPI_CR2_FRXTH;
+  SPI1->CR1 = SPI_CR1_MSTR | SPI_CR1_SSM | SPI_CR1_SSI | (br << SPI_CR1_BR_Pos);
+  SPI1->CR1 |= SPI_CR1_SPE;
+}
+
+static void envoi_octets(const uint8_t *d, uint32_t n)
+{
+  while (n--) {
+    while (!(SPI1->SR & SPI_SR_TXE)) {}
+    *(volatile uint8_t *)&SPI1->DR = *d++;
+  }
+  attendre_fin_envoi();
+}
+
+static void commande_ecran(uint8_t c, const uint8_t *d, uint32_t n)
+{
+  CS_PORT->BRR = CS_PIN;
+  DC_PORT->BRR = DC_PIN;
+  envoi_octets(&c, 1);
+  DC_PORT->BSRR = DC_PIN;
+  if (n) {
+    envoi_octets(d, n);
+  }
+  CS_PORT->BSRR = CS_PIN;
+}
+
+static void envoi_dma(const uint8_t *d, uint32_t n)
+{
+  DMA1_Channel1->CCR = 0;
+  DMA1->IFCR = DMA_IFCR_CGIF1;
+  DMA1_Channel1->CPAR = (uint32_t)&SPI1->DR;
+  DMA1_Channel1->CMAR = (uint32_t)d;
+  DMA1_Channel1->CNDTR = n;
+  DMA1_Channel1->CCR = DMA_CCR_MINC | DMA_CCR_DIR | DMA_CCR_EN;
+  SPI1->CR2 |= SPI_CR2_TXDMAEN;
+  while (!(DMA1->ISR & DMA_ISR_TCIF1)) {}
+  attendre_fin_envoi();
+  SPI1->CR2 &= ~SPI_CR2_TXDMAEN;
+  DMA1_Channel1->CCR = 0;
+}
+
+/* Ouvre une zone : les octets suivants, CS bas et DC haut, sont des pixels. */
+static void ouvrir_zone(uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1)
+{
+  uint8_t cx[4] = { (uint8_t)(x0 >> 8), (uint8_t)x0, (uint8_t)(x1 >> 8), (uint8_t)x1 };
+  uint8_t cy[4] = { (uint8_t)(y0 >> 8), (uint8_t)y0, (uint8_t)(y1 >> 8), (uint8_t)y1 };
+  commande_ecran(0x2A, cx, 4);
+  commande_ecran(0x2B, cy, 4);
+
+  uint8_t c = 0x2C;
+  CS_PORT->BRR = CS_PIN;
+  DC_PORT->BRR = DC_PIN;
+  envoi_octets(&c, 1);
+  DC_PORT->BSRR = DC_PIN;
+}
+
+static void remplir(uint16_t couleur)
+{
+  for (uint32_t i = 0; i < LARGEUR; i++) {
+    ligne_[2 * i] = (uint8_t)(couleur >> 8);
+    ligne_[2 * i + 1] = (uint8_t)couleur;
+  }
+  ouvrir_zone(0, 0, LARGEUR - 1, HAUTEUR - 1);
+  for (uint32_t y = 0; y < HAUTEUR; y++) {
+    envoi_dma(ligne_, sizeof(ligne_));
+  }
+  CS_PORT->BSRR = CS_PIN;
+}
+
+static void init_ecran(void)
+{
+  __HAL_RCC_SPI1_CLK_ENABLE();
+  __HAL_RCC_DMAMUX1_CLK_ENABLE();
+  __HAL_RCC_DMA1_CLK_ENABLE();
+  DMAMUX1_Channel0->CCR = DMA_REQUEST_SPI1_TX;
+
+  /* Selections hautes avant de passer en sortie : tout reste au repos. */
+  HAL_GPIO_WritePin(CS_PORT, CS_PIN, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(RST_PORT, RST_PIN, GPIO_PIN_SET);
+  GPIO_InitTypeDef g = {0};
+  g.Mode = GPIO_MODE_OUTPUT_PP;
+  g.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  g.Pin = DC_PIN | RST_PIN;
+  HAL_GPIO_Init(GPIOB, &g);
+  g.Pin = CS_PIN;
+  HAL_GPIO_Init(GPIOA, &g);
+  g.Mode = GPIO_MODE_AF_PP;
+  g.Pin = GPIO_PIN_5 | GPIO_PIN_7;
+  g.Alternate = GPIO_AF5_SPI1;
+  HAL_GPIO_Init(GPIOA, &g);
+
+  /* Initialisation a 10,6 MHz, puis 85 MHz, vitesse validee a l'oeil. */
+  config_ecran_spi(3);
+  RST_PORT->BRR = RST_PIN;
+  HAL_Delay(10);
+  RST_PORT->BSRR = RST_PIN;
+  HAL_Delay(120);
+
+  const uint8_t *p = INIT_GC9A01;
+  const uint8_t *fin = INIT_GC9A01 + sizeof(INIT_GC9A01);
+  while (p < fin) {
+    uint8_t c = *p++;
+    uint8_t n = *p++;
+    commande_ecran(c, p, n);
+    p += n;
+  }
+  commande_ecran(0x11, NULL, 0);
+  HAL_Delay(120);
+  commande_ecran(0x29, NULL, 0);
+  HAL_Delay(20);
+
+  config_ecran_spi(0);
+  remplir(NOIR);
+}
+
+static void dessiner_car(uint16_t x, uint16_t y, const uint8_t *g)
+{
+  static uint8_t buf[CAR_L * CAR_H * 2];
+  uint32_t i = 0;
+  for (uint32_t r = 0; r < 7; r++) {
+    for (uint32_t e = 0; e < ECHELLE; e++) {
+      for (uint32_t c = 0; c < 6; c++) {
+        uint8_t v = (c < 5 && (g[r] & (0x10U >> c))) ? 0xFF : 0x00;
+        for (uint32_t s = 0; s < ECHELLE; s++) {
+          buf[i++] = v;
+          buf[i++] = v;
+        }
+      }
+    }
+  }
+  ouvrir_zone(x, y, (uint16_t)(x + CAR_L - 1), (uint16_t)(y + CAR_H - 1));
+  envoi_dma(buf, sizeof(buf));
+  CS_PORT->BSRR = CS_PIN;
+}
+
+/* Une ligne : lettre, puis nombre cale a droite sur 6 positions. */
+static void dessiner_ligne(uint16_t y, const uint8_t *lettre, int32_t v)
+{
+  const uint16_t x0 = 36;
+  dessiner_car(x0, y, lettre);
+
+  uint32_t u = (v < 0) ? (uint32_t)(-v) : (uint32_t)v;
+  int pos = 6;
+  do {
+    dessiner_car((uint16_t)(x0 + pos * CAR_L), y, CHIFFRES[u % 10U]);
+    u /= 10U;
+    pos--;
+  } while (u && pos > 0);
+  if (v < 0 && pos > 0) {
+    dessiner_car((uint16_t)(x0 + pos * CAR_L), y, L_MOINS);
+    pos--;
+  }
+  while (pos > 0) {
+    dessiner_car((uint16_t)(x0 + pos * CAR_L), y, L_VIDE);
+    pos--;
+  }
+}
+
 /* --- Profils, identiques a HKProfils.cpp -------------------------------- */
 
 static Profil profil_base(void)
@@ -802,6 +1132,9 @@ static void executer(uint32_t c, uint32_t *fin)
       calage_electrique();
       if (calage_ok) {
         carte_cogging();
+        if (cogging_ok) {
+          sauver_calibration();
+        }
       }
       return;
     case 10: p = profil_menu(27.0f, 1.05f, 1.5f); break;
@@ -865,6 +1198,9 @@ int main(void)
 
   init_table_sin();
   init_table_crc();
+  charger_calibration();
+  init_ecran();
+  init_molette();
   init_capteur();
   uint32_t raw;
   for (int i = 0; i < 100; i++) {
@@ -880,6 +1216,7 @@ int main(void)
   init_pwm();
 
   uint32_t t_led = 0;
+  uint32_t t_texte = 0;
   uint32_t fin = 0;
   while (1) {
     const uint32_t c = commande;
@@ -916,6 +1253,20 @@ int main(void)
     angle_brut = (int32_t)raw14_;
     vitesse_mrad_s = (int32_t)(vit_ * 1000.0f);
     u_mv = (int32_t)(u_ * 1000.0f);
+
+    const int32_t m = (int32_t)TIM2->CNT;
+    molette = m;
+    molette_crans = (m + ((m >= 0) ? 2 : -2)) / 4;
+
+    if (maintenant - t_texte >= 50U) {
+      t_texte = maintenant;
+      const uint32_t debut = DWT->CYCCNT;
+      dessiner_ligne(48, L_A, angle_brut);
+      dessiner_ligne(86, L_M, molette_crans);
+      dessiner_ligne(124, L_C, cran);
+      dessiner_ligne(162, L_E, (int32_t)nb_crc_faux);
+      affichage_us = (DWT->CYCCNT - debut) / (SystemCoreClock / 1000000U);
+    }
 
     if (maintenant - t_led >= 250U) {
       t_led = maintenant;
